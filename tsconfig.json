@@ -1,0 +1,28 @@
+{
+	"compileOnSave": false,
+	"compilerOptions": {
+		"baseUrl": ".",
+		"declaration": true,
+		"outDir": "./dst",
+		"sourceMap": true,
+		"strict": true,
+		"stripInternal": true,
+		"noImplicitReturns": true,
+		"moduleResolution": "node",
+		"target": "esnext",
+		"typeRoots": [
+			"node_modules/@types"
+		],
+		"lib": [
+			"esnext",
+			"dom"
+		]
+	},
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"dst",
+		"node_modules"
+	]
+}
