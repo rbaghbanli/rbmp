@@ -7,9 +7,16 @@ export default class Connection_Port {
 
 	constructor(
 		private _conn_factory: () => any,
-		private _conn_interval: number = 1000,
-		private _conn_attempts: number = 5
-	) {}
+		private _conn_attempts: number = 5,
+		private _conn_interval: number = 500
+	) {
+		if ( _conn_attempts < 1 ) {
+			_conn_attempts = 1;
+		}
+		if ( _conn_interval < 10 ) {
+			_conn_interval = 10;
+		}
+	}
 	private _ws: any;
 	private _msg$ = new Subject<Binary_Message>();
 	private _state$ = new BehaviorSubject<boolean>( false );

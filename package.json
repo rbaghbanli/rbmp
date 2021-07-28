@@ -1,6 +1,6 @@
 {
 	"name": "rbmp",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Reactive binary messaging protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
@@ -13,16 +13,23 @@
 			"email": "riad@baghbanli.com"
 		}
 	],
-	"scripts": {
+	"keywords": [
+		"Binary",
+		"Messaging",
+		"Protocol",
+		"Compose",
+		"Parse",
+		"Serialize",
+		"Deserialize",
+		"Websocket"
+	],	"scripts": {
 		"clean": "rimraf dst/*",
 		"lint": "tslint --project tsconfig.json",
 		"predebug": "npm run clean",
 		"debug": "tsc --build",
 		"prebuild": "npm run clean",
-		"build": "tsc -b",
-		"predeploy": "npm run build",
-		"deploy": "npm publish",
-		"postdeploy": ""
+		"build": "tsc --build",
+		"prepare": "npm run build"
 	},
 	"license": "MIT",
 	"repository": {

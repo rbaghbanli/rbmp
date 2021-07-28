@@ -1,7 +1,7 @@
 import { forkJoin, Observable, Subject, of } from 'rxjs';
 import { mergeMap, takeUntil } from 'rxjs/operators';
 
-import Binary_Message from './/binary-message';
+import Binary_Message from './binary-message';
 import Connection_Port from './connection-port';
 
 export default class Subscription_Pool {
