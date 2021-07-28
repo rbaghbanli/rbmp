@@ -7,8 +7,8 @@ Can be used for client-server and server-server communication.
 ## Design
 
 Every binary message includes 12 byte header, 4 bytes for topic identifier, and 8 bytes for reference value.
-Client can send a request on the specified topic, and response is filtered by reference value that is used as request identifier.
-Client also can subscribe for all messages for the specified topic filtered by reference value on server side to avoid excessive data traffic.
+Multiple requests can be sent from the client on the same specific topic, and response is delivered according to reference value that is used as request identifier.
+Client can subscribe for all messages for the specific topic and get them filtered by reference value on the server side avoiding excessive data traffic.
 
 ## Installation
 npm install rbmp
