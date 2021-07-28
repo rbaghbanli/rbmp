@@ -4,10 +4,10 @@ Reactive Binary Messaging Protocol
 Reactive implementation of binary messaging over websocket.
 Can be used for client-server and server-server communication.
 
-# Installation
+## Installation
 npm install rbmp
 
-# Creating connection in browser app
+## Creating connection in browser app
 Sample code to create connection in browser app:
 
 ```ts
@@ -21,7 +21,7 @@ const conn_port = new Connection_Port(
 ...
 ```
 
-# Creating connection in node app
+## Creating connection in node app
 Sample code to create connection in node app:
 
 ```ts
@@ -36,7 +36,7 @@ const conn_port = new Connection_Port(
 ...
 ```
 
-# Implementing request/response call
+## Implementing request/response call
 Sample code to request some data from server:
 
 ```ts
@@ -48,7 +48,7 @@ let response: Observable<Bianry_Message> =
 	conn_port.post( req );
 ```
 
-# Implementing subscription stream
+## Implementing subscription stream
 Sample code to subscribe to stream from server:
 
 ```ts
