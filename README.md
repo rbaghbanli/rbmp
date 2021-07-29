@@ -51,7 +51,7 @@ Sample code to request some data from server:
 const req = Message.from_header( 101010 );
 req.write_num64( 101011 );
 req.write_string( '101012' );
-let response: Observable<Bianry_Message> =
+let response: Observable<Binary_Message> =
 	conn_port.post( req );
 ...
 ```
