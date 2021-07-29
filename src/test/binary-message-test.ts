@@ -1,8 +1,8 @@
 import Binary_Message from '../export/binary-message';
 
-class Serialization_Test {
+class Binary_Message_Test {
 
-	run(): number {
+	test_read_write_message(): number {
 		let passed = 0, failed = 0;
 		console.log( `test message.test_read_write_message started` );
 		[
