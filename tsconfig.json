@@ -9,12 +9,12 @@
 		"stripInternal": true,
 		"noImplicitReturns": true,
 		"moduleResolution": "node",
-		"target": "esnext",
+		"target": "es2017",
 		"typeRoots": [
 			"node_modules/@types"
 		],
 		"lib": [
-			"esnext",
+			"es2017",
 			"dom"
 		]
 	},
