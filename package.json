@@ -1,6 +1,6 @@
 {
 	"name": "rbmp",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Reactive Ninary Messaging Protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
@@ -43,7 +43,7 @@
 		"url": "https://github.com/rbaghbanli/rbmp.git"
 	},
 	"dependencies": {
-		"rxjs": "~7.2.0"
+		"rxjs": "~7.3.0"
 	},
 	"devDependencies": {
 		"@types/ws": "~7.4.7",
