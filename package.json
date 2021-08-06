@@ -1,6 +1,6 @@
 {
 	"name": "rbmp",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"description": "Reactive Ninary Messaging Protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
