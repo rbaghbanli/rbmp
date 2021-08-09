@@ -4,14 +4,26 @@ Reactive Binary Messaging Protocol
 Reactive implementation of binary messaging over websocket.
 Can be used for client-server and server-server communication.
 
-## Design
 
-Every binary message includes 12 byte header, 4 bytes for topic identifier, and 8 bytes for reference value.
-Multiple requests can be sent from the client on the same specific topic, and response is delivered according to reference value that is used as request identifier.
-Client can subscribe for all messages for the specific topic and get them filtered by reference value on the server side avoiding excessive data traffic.
+## Binary Message
+Binary message is a byte sequence designed for compact data representation and minimal transmission footprint.
+Every binary message is prefixed with 12 byte message header to enable various messaging patterns.
+Message header consists of 4 bytes of topic identifier, and 8 bytes of reference value.
 
-## Installation
-npm install rbmp
+
+## Connection Port
+Connection port provides functionality to establish websocket connection in reactive way.
+Constructor takes factory method to instantiate websocket instance as the first parameter.
+Connection port can be used to send binary message over websocket connection.
+It also can be used to send binary message as a request and await on response.
+Multiple requests can be sent from the client on the same topic, and response is delivered according to reference value that is used as request identifier.
+Connection port can also wait for all messages on specific topic and optional reference value.
+
+
+## Subscription Pool
+Subscription pool provides management of subscription observables.
+Client can subscribe for all messages for the specific topic, or subscribe for messages for the specific topic and get them filtered by reference value on the server side.
+
 
 ## Creating connection in browser app
 Sample code to create connection in browser app:
@@ -28,8 +40,9 @@ const conn_port = new Connection_Port(
 ...
 ```
 
-## Creating connection in node app
-Sample code to create connection in node app:
+
+## Creating connection in nodejs app
+Sample code to create connection in nodejs app:
 
 ```ts
 import * as WebSocket from 'ws';
@@ -43,29 +56,41 @@ const conn_port = new Connection_Port(
 ...
 ```
 
-## Implementing request/response call
+
+## Implementing request/response calls
 Sample code to request some data from server:
 
 ```ts
 ...
+// create binary message for request on topic 101010
 const req = Message.from_header( 101010 );
 req.write_num64( 101011 );
 req.write_string( '101012' );
+// observable of response message will be invoked no more than once
 let response: Observable<Binary_Message> =
 	conn_port.post( req );
 ...
 ```
 
-## Implementing subscription stream
+
+## Implementing subscription streams
 Sample code to subscribe to and unsubscribe from server data stream:
 
 ```ts
 ...
+// create subscription pool
 subs_pool = new Subscription_Pool();
-let stream: Observable<Binary_Message> =
-	subs_pool.start( conn_port, sid, msg );
+// stream all messages on topic 101010
+let stream_all: Observable<Binary_Message> =
+	subs_pool.start( conn_port, 365, Message.from_header( 101010 ) );
+// stream messages on topic 20 filtered by reference value 100
+let stream_100: Observable<Binary_Message> =
+	subs_pool.start( conn_port, 720, Message.from_header( 20, 100 ) );
 ...
-subs_pool.stop( conn_port, sid );
+// unsubscribe from stream number 365
+subs_pool.stop( conn_port, 365 );
+...
+// unsubscribe from all streams and destroy pool
 subs_pool.destroy( conn_port );
 ...
 ```

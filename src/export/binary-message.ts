@@ -2,7 +2,9 @@ const _MSG_HEADER_SIZE = 12;
 const _MSG_DEFAULT_SIZE = 20;
 const _MSG_MIN_INT32 = -0x80000000;
 const _MSG_MIN_INT54 = -0x20000000000000;
-// const _MSG_TIME_MS_EPOCH = -2208988800000;	// 1900-01-01 00:00:00
+/*
+	const _MSG_TIME_MS_EPOCH = -2208988800000;	// 1900-01-01 00:00:00
+*/
 
 export default class Binary_Message {
 
