@@ -46,11 +46,11 @@ export default class Connection_Port {
 				};
 				ws.onmessage = ( event: any ) => {
 					const msg = new Binary_Message( event.data as ArrayBuffer );
-					if ( msg.topic === 0 && msg.reference === 0 && msg.is_empty ) {
+					if ( msg.is_blank ) {
 						console.debug( `Connection port: ping received` );
 					}
 					else {
-						console.debug( `Connection port: message ${ msg.topic }/${ msg.reference } received` );
+						console.debug( `Connection port: message ${ msg.header_string() } received` );
 						this._msg$.next( msg );
 					}
 				};
@@ -79,14 +79,14 @@ export default class Connection_Port {
 	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._msg$.pipe(
 			filter( predicate ),
-			map( msg => new Binary_Message( msg.read_data() ) )
+			map( msg => new Binary_Message( msg.data() ) )
 		);
 	}
 
 	send( msg: Binary_Message ): Observable<void> {
 		if ( this._ws && this._ws.readyState === 1 ) {
-			this._ws.send( msg.read_data() );
-			console.debug( `Connection port: message ${ msg.topic }/${ msg.reference } sent` );
+			this._ws.send( msg.data() );
+			console.debug( `Connection port: message ${ msg.header_string() } sent` );
 			return of( undefined );
 		}
 		else {
@@ -105,7 +105,7 @@ export default class Connection_Port {
 
 	post( msg: Binary_Message ): Observable<Binary_Message> {
 		return this.send( msg ).pipe(
-			mergeMap( () => this.wait( m => m.topic === msg.topic && m.reference === msg.reference ) ),
+			mergeMap( () => this.wait( m => m.match_header( msg ) ) ),
 			take( 1 )
 		);
 	}

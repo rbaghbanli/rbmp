@@ -1,23 +1,19 @@
-const _MSG_HEADER_SIZE = 12;
-const _MSG_DEFAULT_SIZE = 20;
-const _MSG_MIN_INT32 = -0x80000000;
-const _MSG_MIN_INT54 = -0x20000000000000;
-/*
-	const _MSG_TIME_MS_EPOCH = -2208988800000;	// 1900-01-01 00:00:00
-*/
+const __MSG_HEADER_SIZE = 16;
+const __MSG_DATE_NULL_VALUE = -0x80000000;
+const __MSG_TIME_NULL_VALUE = -0x20000000000000;
 
 export default class Binary_Message {
 
 	constructor( data?: ArrayBuffer ) {
-		if ( !data || data.byteLength < _MSG_HEADER_SIZE ) {
-			this._data =  new ArrayBuffer( _MSG_HEADER_SIZE + _MSG_DEFAULT_SIZE );
-			this._write_offset = _MSG_HEADER_SIZE;
+		if ( !data || data.byteLength < __MSG_HEADER_SIZE ) {
+			this._data =  new ArrayBuffer( __MSG_HEADER_SIZE << 1 );
+			this._write_offset = __MSG_HEADER_SIZE;
 		}
 		else {
 			this._data = data;
 			this._write_offset = data.byteLength;
 		}
-		this._read_offset = _MSG_HEADER_SIZE;
+		this._read_offset = __MSG_HEADER_SIZE;
 		this._view = new DataView( this._data );
 	}
 	protected _data: ArrayBuffer;
@@ -25,28 +21,40 @@ export default class Binary_Message {
 	protected _write_offset: number;
 	private _view: DataView;
 
-	read_data(): ArrayBuffer {
+	data(): ArrayBuffer {
 		return this._data.slice( 0, this._write_offset );
 	}
 
-	read_header(): ArrayBuffer {
-		return this._data.slice( 0, _MSG_HEADER_SIZE );
+	header(): ArrayBuffer {
+		return this._data.slice( 0, __MSG_HEADER_SIZE );
 	}
 
-	read_content(): ArrayBuffer {
-		return this._data.slice( _MSG_HEADER_SIZE, this._write_offset );
+	content(): ArrayBuffer {
+		return this._data.slice( __MSG_HEADER_SIZE, this._write_offset );
 	}
 
 	get length(): number {
 		return this._write_offset;
 	}
 
-	get is_empty(): boolean {
+	get at_end(): boolean {
 		return this._read_offset === this._write_offset;
 	}
 
+	get is_empty(): boolean {
+		return this._write_offset === __MSG_HEADER_SIZE;
+	}
+
+	get is_blank(): boolean {
+		return !this.get_nat64_header( 0 ) && !this.get_nat64_header( 1 ) && this.is_empty;
+	}
+
+	match_header( m: Binary_Message ): boolean {
+		return this.get_nat64_header( 0 ) === m.get_nat64_header( 0 ) && this.get_nat64_header( 1 ) === m.get_nat64_header( 1 );
+	}
+
 	reset_read(): Binary_Message {
-		this._read_offset = _MSG_HEADER_SIZE;
+		this._read_offset = __MSG_HEADER_SIZE;
 		return this;
 	}
 
@@ -62,20 +70,70 @@ export default class Binary_Message {
 		this._view = new DataView( this._data = data );
 	}
 
-	get topic(): number {
-		return this._view.getInt32( 0 );
+	get_int128_header(): bigint {
+		return ( this._view.getBigInt64( 0 ) << BigInt( 64 ) ) + this._view.getBigUint64( 8 );
 	}
 
-	set topic( v: number ) {
-		this._view.setInt32( 0, v || 0 );
+	set_int128_header( v: bigint ) {
+		this._view.setBigInt64( 0, BigInt.asIntN( 64, v >> BigInt( 64 ) ) );
+		this._view.setBigUint64( 8, v & BigInt( 0xffffffffffffffff ) );
 	}
 
-	get reference(): number {
-		return this._view.getFloat64( 4 );
+	get_nat128_header(): bigint {
+		return ( this._view.getBigUint64( 0 ) << BigInt( 64 ) ) + this._view.getBigUint64( 8 );
 	}
 
-	set reference( v: number ) {
-		this._view.setFloat64( 4, v || 0 );
+	set_nat128_header( v: bigint ) {
+		this._view.setBigUint64( 0, BigInt.asUintN( 64, v >> BigInt( 64 ) ) );
+		this._view.setBigUint64( 8, v & BigInt( 0xffffffffffffffff ) );
+	}
+
+	get_int64_header( i: 0 | 1 ): bigint {
+		return this._view.getBigInt64( i << 3 );
+	}
+
+	set_int64_header( i: 0 | 1, v: bigint ): void {
+		this._view.setBigInt64( i << 3, v );
+	}
+
+	get_nat64_header( i: 0 | 1 ): bigint {
+		return this._view.getBigUint64( i << 3 );
+	}
+
+	set_nat64_header( i: 0 | 1, v: bigint ): void {
+		this._view.setBigUint64( i << 3, v );
+	}
+
+	get_int32_header( i: 0 | 1 | 2 | 3 ): number {
+		return this._view.getInt32( i << 2 );
+	}
+
+	set_int32_header( i: 0 | 1 | 2 | 3, v: number ): void {
+		this._view.setInt32( i << 2, v );
+	}
+
+	get_nat32_header( i: 0 | 1 | 2 | 3 ): number {
+		return this._view.getUint32( i << 2 );
+	}
+
+	set_nat32_header( i: 0 | 1 | 2 | 3, v: number ): void {
+		this._view.setUint32( i << 2, v );
+	}
+
+	get_int16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 ): number {
+		return this._view.getInt16( i << 1 );
+	}
+
+	set_int16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, v: number ): void {
+		this._view.setInt16( i << 1, v );
+	}
+
+	get_nat16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 ): number {
+		return this._view.getUint16( i << 1 );
+	}
+
+	set_nat16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, v: number ): void {
+		this._view.setUint16( i << 2, v );
 	}
 
 	protected read<T>( increment: number, f: () => T ): T {
@@ -91,7 +149,8 @@ export default class Binary_Message {
 	protected write( increment: number, f: () => void ): void {
 		const offset = this._write_offset + increment;
 		if ( offset > this._data.byteLength ) {
-			this.add_capacity( offset - this._data.byteLength );
+			const deficit = offset - this._data.byteLength;
+			this.add_capacity( deficit < this._data.byteLength ? this._data.byteLength : deficit );
 		}
 		f();
 		this._write_offset = offset;
@@ -120,15 +179,15 @@ export default class Binary_Message {
 	write_int32( v: number ): void {
 		this.write( 4, () => this._view.setInt32( this._write_offset, v || 0 ) );
 	}
-/*
+
 	read_int64(): bigint {
-		return this.get( 8, () => this._view.getBigInt64( this._read_offset ) );
+		return this.read( 8, () => this._view.getBigInt64( this._read_offset ) );
 	}
 
 	write_int64( v: bigint ): void {
-		this.set( 8, () => this._view.setBigInt64( this._write_offset, v ) );
+		this.write( 8, () => this._view.setBigInt64( this._write_offset, v ) );
 	}
-*/
+
 	read_nat16(): number {
 		return this.read( 2, () => this._view.getUint16( this._read_offset ) );
 	}
@@ -144,15 +203,15 @@ export default class Binary_Message {
 	write_nat32( v: number ): void {
 		this.write( 4, () => this._view.setUint32( this._write_offset, v || 0 ) );
 	}
-/*
+
 	read_nat64(): bigint {
-		return this.get( 8, () => this._view.getBigUint64( this._read_offset ) );
+		return this.read( 8, () => this._view.getBigUint64( this._read_offset ) );
 	}
 
 	write_nat64( v: bigint ): void {
-		this.set( 8, () => this._view.setBigUint64( this._write_offset, v ) );
+		this.write( 8, () => this._view.setBigUint64( this._write_offset, v ) );
 	}
-*/
+
 	read_num32(): number {
 		return this.read( 4, () => this._view.getFloat32( this._read_offset ) );
 	}
@@ -236,25 +295,25 @@ export default class Binary_Message {
 	}
 
 	write_length( v: number | null ): void {
-		this.write_num64( v == null || v < 0 ? _MSG_MIN_INT54 : v );
+		this.write_num64( v == null || v < 0 ? -1 : v );
 	}
 
 	read_date(): Date | null {
 		const v = this.read_int32();
-		return v === _MSG_MIN_INT32 ? null : new Date( v * ( 24 * 60 * 60 * 1000 ) );
+		return v === __MSG_DATE_NULL_VALUE ? null : new Date( v * ( 24 * 60 * 60 * 1000 ) );
 	}
 
 	write_date( v: Date ): void {
-		this.write_int32( v ? ( v.getTime() / ( 24 * 60 * 60 * 1000 ) ) : _MSG_MIN_INT32 );
+		this.write_int32( v ? ( v.getTime() / ( 24 * 60 * 60 * 1000 ) ) : __MSG_DATE_NULL_VALUE );
 	}
 
 	read_time(): Date | null {
 		const v = this.read_num64();
-		return v === _MSG_MIN_INT54 ? null : new Date( v );
+		return v === __MSG_TIME_NULL_VALUE ? null : new Date( v );
 	}
 
 	write_time( v: Date ): void {
-		this.write_num64( v ? v.getTime() : _MSG_MIN_INT54 );
+		this.write_num64( v ? v.getTime() : __MSG_TIME_NULL_VALUE );
 	}
 
 	read_binary(): DataView | null {
@@ -353,33 +412,21 @@ export default class Binary_Message {
 		}
 	}
 
-	toString(): string {
-		const bytes = Array.from( new Uint8Array( this._data ) ).slice( 12, this._write_offset );
-		return `[${ this._write_offset }] <${ this.topic }: ${ this.reference }> ${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
+	clone(): Binary_Message {
+		return new Binary_Message( this.data() );
 	}
 
 	clone_header(): Binary_Message {
-		const msg = new Binary_Message();
-		msg.topic = this.topic;
-		msg.reference = this.reference;
-		return msg;
+		return new Binary_Message( this.header() );
 	}
 
-	static from_header( topic: number = 0, ref: number = Binary_Message.random_nat53 ): Binary_Message {
-		const msg = new Binary_Message();
-		msg.topic = topic;
-		msg.reference = ref;
-		return msg;
+	header_string(): string {
+		return `[${ this._write_offset }] <${ this.get_nat128_header().toString( 16 ) }>`;
 	}
 
-	static from_content( content: ArrayBuffer | SharedArrayBuffer ): Binary_Message {
-		const msg = new Binary_Message();
-		msg.write_buf( content );
-		return msg;
-	}
-
-	protected static get random_nat53(): number {
-		return Math.round( ( ( ( new Date() ).getTime() % 1000000 ) / 1000000 ) * Math.random() * 9007199254740991 );
+	toString(): string {
+		const bytes = Array.from( new Uint8Array( this._data ) ).slice( 12, this._write_offset );
+		return `${ this.header_string() } ${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
 	}
 
 }

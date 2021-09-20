@@ -38,15 +38,15 @@ export default class Subscription_Pool {
 	}
 
 	private subscribe( conn: Connection_Port, msg: Binary_Message ): Observable<Binary_Message> {
-		console.debug( `Subscription pool: message ${ msg.topic }/${ msg.reference } subscribed` );
+		console.debug( `Subscription pool: message ${ msg.header_string() } subscribed` );
 		return conn.send( msg ).pipe(
-			mergeMap( () => conn.wait( m => m.topic === msg.topic && m.reference === msg.reference ) ),
+			mergeMap( () => conn.wait( m => m.match_header( msg ) ) ),
 			takeUntil( this._end$ )
 		);
 	}
 
 	private unsubscribe( conn: Connection_Port, msg: Binary_Message ): Observable<void> {
-		console.debug( `Subscription pool: message ${ msg.topic }/${ msg.reference } unsubscribed` );
+		console.debug( `Subscription pool: message ${ msg.header_string() } unsubscribed` );
 		const msg_ = msg.clone_header();
 		msg_.write_length( null );
 		return conn.send( msg_ );
