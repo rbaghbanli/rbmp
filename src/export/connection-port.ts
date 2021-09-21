@@ -17,7 +17,7 @@ export default class Connection_Port {
 			_conn_interval = 10;
 		}
 	}
-	private _ws: any;
+	private _conn: any;
 	private _msg$ = new Subject<Binary_Message>();
 	private _state$ = new BehaviorSubject<boolean>( false );
 	private _error$ = new Subject<string>();
@@ -32,19 +32,19 @@ export default class Connection_Port {
 
 	open(): void {
 		try {
-			if ( !this._ws || this._ws.readyState > 1 ) {
-				const ws = this._ws = this._conn_factory();
-				ws.binaryType = 'arraybuffer';
-				console.debug( `Connection port: websocket [${ ws.url }] connecting...` );
-				ws.onopen = () => {
-					console.debug( `Connection port: websocket [${ ws.url }] connected` );
+			if ( !this._conn || this._conn.readyState > 1 ) {
+				const conn = this._conn = this._conn_factory();
+				conn.binaryType = 'arraybuffer';
+				console.debug( `Connection port: websocket [${ conn.url }] connecting...` );
+				conn.onopen = () => {
+					console.debug( `Connection port: websocket [${ conn.url }] connected` );
 					this._state$.next( true );
 				};
-				ws.onclose = ( event: any ) => {
-					console.debug( `Connection port: websocket [${ ws.url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
+				conn.onclose = ( event: any ) => {
+					console.debug( `Connection port: websocket [${ conn.url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
 					this._state$.next( false );
 				};
-				ws.onmessage = ( event: any ) => {
+				conn.onmessage = ( event: any ) => {
 					const msg = new Binary_Message( event.data as ArrayBuffer );
 					if ( msg.is_blank ) {
 						console.debug( `Connection port: ping received` );
@@ -54,9 +54,9 @@ export default class Connection_Port {
 						this._msg$.next( msg );
 					}
 				};
-				ws.onerror = () => {
-					console.debug( `Connection port: websocket [${ ws.url }] error ` );
-					this._error$.next( `websocket [${ ws.url }] error` );
+				conn.onerror = () => {
+					console.debug( `Connection port: websocket [${ conn.url }] error ` );
+					this._error$.next( `websocket [${ conn.url }] error` );
 				};
 			}
 		}
@@ -67,12 +67,12 @@ export default class Connection_Port {
 
 	close(): void {
 		try {
-			if ( this._ws && this._ws.readyState === 1 ) {
-				this._ws.close();
+			if ( this._conn && this._conn.readyState === 1 ) {
+				this._conn.close();
 			}
 		}
 		catch ( exc ) {}
-		this._ws = undefined;
+		this._conn = undefined;
 		this._state$.next( false );
 	}
 
@@ -84,8 +84,8 @@ export default class Connection_Port {
 	}
 
 	send( msg: Binary_Message ): Observable<void> {
-		if ( this._ws && this._ws.readyState === 1 ) {
-			this._ws.send( msg.data() );
+		if ( this._conn && this._conn.readyState === 1 ) {
+			this._conn.send( msg.data() );
 			console.debug( `Connection port: message ${ msg.header_string() } sent` );
 			return of( undefined );
 		}

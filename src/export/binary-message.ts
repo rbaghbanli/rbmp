@@ -4,6 +4,11 @@ const __MSG_TIME_NULL_VALUE = -0x20000000000000;
 
 export default class Binary_Message {
 
+	protected _data: ArrayBuffer;
+	protected _read_offset: number;
+	protected _write_offset: number;
+	private _view: DataView;
+
 	constructor( data?: ArrayBuffer ) {
 		if ( !data || data.byteLength < __MSG_HEADER_SIZE ) {
 			this._data =  new ArrayBuffer( __MSG_HEADER_SIZE << 1 );
@@ -16,10 +21,6 @@ export default class Binary_Message {
 		this._read_offset = __MSG_HEADER_SIZE;
 		this._view = new DataView( this._data );
 	}
-	protected _data: ArrayBuffer;
-	protected _read_offset: number;
-	protected _write_offset: number;
-	private _view: DataView;
 
 	data(): ArrayBuffer {
 		return this._data.slice( 0, this._write_offset );
