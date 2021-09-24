@@ -1,3 +1,3 @@
 export { default as Binary_Message } from './export/binary-message';
-export { default as Connection_Port } from './export/connection-port';
-export { default as Subscription_Pool } from './export/subscription-pool';
+export { default as Publication_Service } from './export/publication-service';
+export { default as Reactive_Connection } from './export/reactive-connection';

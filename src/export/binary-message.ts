@@ -1,37 +1,68 @@
-const __MSG_HEADER_SIZE = 16;
+const __MSG_MAX_NAT32_VALUE = 0xffffffff;
 const __MSG_DATE_NULL_VALUE = -0x80000000;
 const __MSG_TIME_NULL_VALUE = -0x20000000000000;
 
 export default class Binary_Message {
 
+	protected _topic: string;
 	protected _data: ArrayBuffer;
-	protected _read_offset: number;
+	protected _view: DataView;
 	protected _write_offset: number;
-	private _view: DataView;
+	protected _read_offset: number;
 
-	constructor( data?: ArrayBuffer ) {
-		if ( !data || data.byteLength < __MSG_HEADER_SIZE ) {
-			this._data =  new ArrayBuffer( __MSG_HEADER_SIZE << 1 );
-			this._write_offset = __MSG_HEADER_SIZE;
-		}
-		else {
-			this._data = data;
-			this._write_offset = data.byteLength;
-		}
-		this._read_offset = __MSG_HEADER_SIZE;
+	constructor( topic?: string, data?: ArrayBufferLike ) {
+		this._topic = topic ? ( topic.length > __MSG_MAX_NAT32_VALUE ? topic.slice( 0, __MSG_MAX_NAT32_VALUE ): topic ) : '';
+		this._data = data ?? new ArrayBuffer( 0 );
 		this._view = new DataView( this._data );
+		this._read_offset = 0;
+		this._write_offset = this._data.byteLength;
 	}
 
-	data(): ArrayBuffer {
-		return this._data.slice( 0, this._write_offset );
+	static copy_binary( dst: DataView, src: DataView ): void {
+		const length = Math.min( dst.byteLength, src.byteLength, __MSG_MAX_NAT32_VALUE );
+		for ( let lfi = length - 3, i = 0; i < length; ) {
+			if ( i < lfi ) {
+				dst.setUint32( i, src.getUint32( i ) );
+				i += 4;
+			}
+			else {
+				dst.setUint8( i, src.getUint8( i ) );
+				++i;
+			}
+		}
 	}
 
-	header(): ArrayBuffer {
-		return this._data.slice( 0, __MSG_HEADER_SIZE );
+	static from_buffer( buffer: ArrayBufferLike ): Binary_Message {
+		const view = new DataView( buffer );
+		let topic_length = view.getUint32( 0 );
+		let topic = '';
+		let i = 4;
+		for ( let c = 0; c < topic_length && i < buffer.byteLength; ++c, i += 2 ) {
+			topic += String.fromCharCode( view.getUint16( i ) );
+		}
+		const data = new ArrayBuffer( buffer.byteLength - i );
+		Binary_Message.copy_binary( new DataView( data ), new DataView( buffer, i ) );
+		return new Binary_Message( topic, data );
 	}
 
-	content(): ArrayBuffer {
-		return this._data.slice( __MSG_HEADER_SIZE, this._write_offset );
+	to_buffer(): ArrayBuffer {
+		const data = new ArrayBuffer( 4 + ( this._topic.length << 1 ) + this._write_offset );
+		const view = new DataView( data );
+		view.setUint32( 0, this._topic.length );
+		let i = 4;
+		for ( let c = 0; c < this._topic.length; ++c, i += 2 ) {
+			view.setUint16( i, this._topic.charCodeAt( c ) );
+		}
+		Binary_Message.copy_binary( new DataView( data, i ), this._view );
+		return data;
+	}
+
+	get topic(): string {
+		return this._topic;
+	}
+
+	get data(): ArrayBuffer {
+		return this._data;
 	}
 
 	get length(): number {
@@ -42,99 +73,28 @@ export default class Binary_Message {
 		return this._read_offset === this._write_offset;
 	}
 
-	get is_empty(): boolean {
-		return this._write_offset === __MSG_HEADER_SIZE;
-	}
-
 	get is_blank(): boolean {
-		return !this.get_nat64_header( 0 ) && !this.get_nat64_header( 1 ) && this.is_empty;
+		return this._topic.length === 0 && this._write_offset === 0;
 	}
 
-	match_header( m: Binary_Message ): boolean {
-		return this.get_nat64_header( 0 ) === m.get_nat64_header( 0 ) && this.get_nat64_header( 1 ) === m.get_nat64_header( 1 );
-	}
-
-	reset_read(): Binary_Message {
-		this._read_offset = __MSG_HEADER_SIZE;
-		return this;
+	reset_read(): void {
+		this._read_offset = 0;
 	}
 
 	add_capacity( increment: number ): void {
 		const data = new ArrayBuffer( this._data.byteLength + ( increment > this._data.byteLength ? increment : this._data.byteLength ) );
-		( new Uint8Array( data ) ).set( new Uint8Array( this._data ) );
-		this._view = new DataView( this._data = data );
+		const view = new DataView( data );
+		Binary_Message.copy_binary( view, this._view );
+		this._data = data;
+		this._view = view;
 	}
 
 	trim_capacity(): void {
-		const data = new ArrayBuffer( Math.max( this._read_offset, this._write_offset ) );
-		( new Uint8Array( data ) ).set( ( new Uint8Array( this._data ) ).subarray( 0, data.byteLength ) );
-		this._view = new DataView( this._data = data );
-	}
-
-	get_int128_header(): bigint {
-		return ( this._view.getBigInt64( 0 ) << BigInt( 64 ) ) + this._view.getBigUint64( 8 );
-	}
-
-	set_int128_header( v: bigint ) {
-		this._view.setBigInt64( 0, BigInt.asIntN( 64, v >> BigInt( 64 ) ) );
-		this._view.setBigUint64( 8, v & BigInt( 0xffffffffffffffff ) );
-	}
-
-	get_nat128_header(): bigint {
-		return ( this._view.getBigUint64( 0 ) << BigInt( 64 ) ) + this._view.getBigUint64( 8 );
-	}
-
-	set_nat128_header( v: bigint ) {
-		this._view.setBigUint64( 0, BigInt.asUintN( 64, v >> BigInt( 64 ) ) );
-		this._view.setBigUint64( 8, v & BigInt( 0xffffffffffffffff ) );
-	}
-
-	get_int64_header( i: 0 | 1 ): bigint {
-		return this._view.getBigInt64( i << 3 );
-	}
-
-	set_int64_header( i: 0 | 1, v: bigint ): void {
-		this._view.setBigInt64( i << 3, v );
-	}
-
-	get_nat64_header( i: 0 | 1 ): bigint {
-		return this._view.getBigUint64( i << 3 );
-	}
-
-	set_nat64_header( i: 0 | 1, v: bigint ): void {
-		this._view.setBigUint64( i << 3, v );
-	}
-
-	get_int32_header( i: 0 | 1 | 2 | 3 ): number {
-		return this._view.getInt32( i << 2 );
-	}
-
-	set_int32_header( i: 0 | 1 | 2 | 3, v: number ): void {
-		this._view.setInt32( i << 2, v );
-	}
-
-	get_nat32_header( i: 0 | 1 | 2 | 3 ): number {
-		return this._view.getUint32( i << 2 );
-	}
-
-	set_nat32_header( i: 0 | 1 | 2 | 3, v: number ): void {
-		this._view.setUint32( i << 2, v );
-	}
-
-	get_int16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 ): number {
-		return this._view.getInt16( i << 1 );
-	}
-
-	set_int16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, v: number ): void {
-		this._view.setInt16( i << 1, v );
-	}
-
-	get_nat16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 ): number {
-		return this._view.getUint16( i << 1 );
-	}
-
-	set_nat16_header( i: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, v: number ): void {
-		this._view.setUint16( i << 2, v );
+		const data = new ArrayBuffer( this._write_offset );
+		const view = new DataView( data );
+		Binary_Message.copy_binary( view, this._view );
+		this._data = data;
+		this._view = view;
 	}
 
 	protected read<T>( increment: number, f: () => T ): T {
@@ -162,7 +122,7 @@ export default class Binary_Message {
 	}
 
 	write_byte( v: number ): void {
-		this.write( 1, () => this._view.setUint8( this._write_offset, v || 0 ) );
+		this.write( 1, () => this._view.setUint8( this._write_offset, v ) );
 	}
 
 	read_int16(): number {
@@ -170,7 +130,7 @@ export default class Binary_Message {
 	}
 
 	write_int16( v: number ): void {
-		this.write( 2, () => this._view.setInt16( this._write_offset, v || 0 ) );
+		this.write( 2, () => this._view.setInt16( this._write_offset, v ) );
 	}
 
 	read_int32(): number {
@@ -178,7 +138,7 @@ export default class Binary_Message {
 	}
 
 	write_int32( v: number ): void {
-		this.write( 4, () => this._view.setInt32( this._write_offset, v || 0 ) );
+		this.write( 4, () => this._view.setInt32( this._write_offset, v ) );
 	}
 
 	read_int64(): bigint {
@@ -194,7 +154,7 @@ export default class Binary_Message {
 	}
 
 	write_nat16( v: number ): void {
-		this.write( 2, () => this._view.setUint16( this._write_offset, v || 0 ) );
+		this.write( 2, () => this._view.setUint16( this._write_offset, v ) );
 	}
 
 	read_nat32(): number {
@@ -202,7 +162,7 @@ export default class Binary_Message {
 	}
 
 	write_nat32( v: number ): void {
-		this.write( 4, () => this._view.setUint32( this._write_offset, v || 0 ) );
+		this.write( 4, () => this._view.setUint32( this._write_offset, v ) );
 	}
 
 	read_nat64(): bigint {
@@ -218,7 +178,7 @@ export default class Binary_Message {
 	}
 
 	write_num32( v: number ): void {
-		this.write( 4, () => this._view.setFloat32( this._write_offset, v || 0 ) );
+		this.write( 4, () => this._view.setFloat32( this._write_offset, v ) );
 	}
 
 	read_num64(): number {
@@ -226,60 +186,49 @@ export default class Binary_Message {
 	}
 
 	write_num64( v: number ): void {
-		this.write( 8, () => this._view.setFloat64( this._write_offset, v || 0 ) );
+		this.write( 8, () => this._view.setFloat64( this._write_offset, v ) );
 	}
 
-	read_bin( len: number | null ): DataView | null {
-		if ( len != null && len >= 0 ) {
-			return this.read( len, () => new DataView( this._data, this._read_offset, len ) );
-		}
-		return null;
+	read_bin( length: number ): DataView {
+		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		return this.read( len, () => new DataView( this._data, this._read_offset, this._read_offset + len ) );
 	}
 
 	write_bin( v: DataView ): void {
-		if ( v != null ) {
-			this.write( v.byteLength, () => {
-				for ( let i = 0; i < v.byteLength; ++i ) {
-					this._view.setUint8( this._write_offset + i, v.getUint8( i ) );
-				}
-			} );
-		}
+		this.write( v.byteLength, () => Binary_Message.copy_binary( new DataView( this._data, this._write_offset ), v ) );
 	}
 
-	read_buf( len: number | null ): ArrayBuffer | null {
-		if ( len != null && len >= 0 ) {
-			return this.read( len, () => this._data.slice( this._read_offset, this._read_offset + len ) );
-		}
-		return null;
+	read_buf( length: number ): ArrayBuffer {
+		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		return this.read( len, () => this._data.slice( this._read_offset, this._read_offset + len ) );
 	}
 
-	write_buf( v: ArrayBuffer | SharedArrayBuffer ): void {
-		if ( v != null ) {
-			this.write_bin( new DataView( v ) );
-		}
+	write_buf( v: ArrayBufferLike ): void {
+		this.write( v.byteLength, () => Binary_Message.copy_binary( new DataView( this._data, this._write_offset ), new DataView( v ) ) );
 	}
 
-	read_str( len: number | null ): string | null {
-		if ( len != null && len >= 0 ) {
-			let v = '';
-			return this.read( len * 2, () => {
-				for ( let i = 0; i < len; ++i ) {
-					v += String.fromCharCode( this._view.getUint16( this._read_offset + i + i ) );
+	read_str( length: number ): string {
+		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		return this.read( len << 1,
+			() => {
+				let v = '';
+				for ( let c = 0, i = this._read_offset; c < len; ++c, i += 2 ) {
+					v += String.fromCharCode( this._view.getUint16( i ) );
 				}
 				return v;
-			} );
-		}
-		return null;
+			}
+		);
 	}
 
 	write_str( v: string ): void {
-		if ( v != null ) {
-			this.write( v.length * 2, () => {
-				for ( let i = 0; i < v.length; ++i ) {
-					this._view.setUint16( this._write_offset + i + i, v.charCodeAt( i ) );
+		const len = Math.min( v.length, __MSG_MAX_NAT32_VALUE );
+		this.write( v.length << 1,
+			() => {
+				for ( let c = 0, i = this._write_offset; c < len; ++c, i += 2 ) {
+					this._view.setUint16( i, v.charCodeAt( c ) );
 				}
-			} );
-		}
+			}
+		);
 	}
 
 	read_bool(): boolean {
@@ -290,13 +239,12 @@ export default class Binary_Message {
 		this.write_byte( v ? 255 : 0 );
 	}
 
-	read_length(): number | null {
-		const v = this.read_num64();
-		return v < 0 ? null : v;
+	read_length(): number {
+		return this.read_nat32();
 	}
 
-	write_length( v: number | null ): void {
-		this.write_num64( v == null || v < 0 ? -1 : v );
+	write_length( v: number ): void {
+		this.write_nat32( Math.min( v, __MSG_MAX_NAT32_VALUE ) );
 	}
 
 	read_date(): Date | null {
@@ -304,7 +252,7 @@ export default class Binary_Message {
 		return v === __MSG_DATE_NULL_VALUE ? null : new Date( v * ( 24 * 60 * 60 * 1000 ) );
 	}
 
-	write_date( v: Date ): void {
+	write_date( v: Date | null | undefined ): void {
 		this.write_int32( v ? ( v.getTime() / ( 24 * 60 * 60 * 1000 ) ) : __MSG_DATE_NULL_VALUE );
 	}
 
@@ -313,57 +261,49 @@ export default class Binary_Message {
 		return v === __MSG_TIME_NULL_VALUE ? null : new Date( v );
 	}
 
-	write_time( v: Date ): void {
+	write_time( v: Date | null | undefined ): void {
 		this.write_num64( v ? v.getTime() : __MSG_TIME_NULL_VALUE );
 	}
 
-	read_binary(): DataView | null {
+	read_binary(): DataView {
 		const length = this.read_length();
 		return this.read_bin( length );
 	}
 
 	write_binary( v: DataView ): void {
-		const length = v != null ? v.byteLength : null;
-		this.write_length( length );
+		this.write_length( v.byteLength );
 		this.write_bin( v );
 	}
 
-	read_buffer(): ArrayBuffer | null {
-		const length = this.read_length();
-		return this.read_buf( length );
+	read_buffer(): ArrayBuffer {
+		return this.read_buf( this.read_length() );
 	}
 
 	write_buffer( v: ArrayBuffer ): void {
-		const length = v != null ? v.byteLength : null;
-		this.write_length( length );
+		this.write_length( v.byteLength );
 		this.write_buf( v );
 	}
 
-	read_string(): string | null {
-		const length = this.read_length();
-		return this.read_str( length );
+	read_string(): string {
+		return this.read_str( this.read_length() );
 	}
 
 	write_string( v: string ): void {
-		const length = v != null ? v.length : null;
-		this.write_length( length );
+		this.write_length( v.length );
 		this.write_str( v );
 	}
 
-	read_array<T>( f: ( msg: Binary_Message ) => T ): T[] | null {
+	read_array<T>( f: ( msg: Binary_Message ) => T ): T[] {
 		const length = this.read_length();
-		if ( length != null ) {
-			const v = new Array<T>( length );
-			for ( let i = 0; i < length; ++i ) {
-				v[ i ] = f( this );
-			}
-			return v;
+		const v = new Array<T>( length );
+		for ( let i = 0; i < length; ++i ) {
+			v[ i ] = f( this );
 		}
-		return null;
+		return v;
 	}
 
 	write_array<T>( a: T[], f: ( v: T, msg: Binary_Message ) => void ): void {
-		const length = a != null ? a.length : null;
+		const length = Math.min( a.length, __MSG_MAX_NAT32_VALUE );
 		this.write_length( length );
 		if ( length != null ) {
 			for ( let i = 0; i < length; ++ i ) {
@@ -372,62 +312,44 @@ export default class Binary_Message {
 		}
 	}
 
-	read_set<K>( f: ( msg: Binary_Message ) => K ): Set<K> | null {
+	read_set<K>( f: ( msg: Binary_Message ) => K ): Set<K> {
 		const size = this.read_length();
-		if ( size != null ) {
-			const v = new Set<K>();
-			for ( let i = 0; i < size; ++i ) {
-				v.add( f( this ) );
-			}
-			return v;
+		const v = new Set<K>();
+		for ( let i = 0; i < size; ++i ) {
+			v.add( f( this ) );
 		}
-		return null;
+		return v;
 	}
 
 	write_set<K>( s: Set<K>, f: ( k: K, msg: Binary_Message ) => void ): void {
-		const size = s != null ? s.size : null;
+		const size = Math.min( s.size, __MSG_MAX_NAT32_VALUE );
 		this.write_length( size );
-		if ( size != null ) {
-			s.forEach( k => f( k, this ) );
-		}
+		s.forEach( k => f( k, this ) );
 	}
 
-	read_map<K, V>( f: ( msg: Binary_Message ) => [ K, V ] ): Map<K, V> | null {
+	read_map<K, V>( f: ( msg: Binary_Message ) => [ K, V ] ): Map<K, V> {
 		const size = this.read_length();
-		if ( size != null ) {
-			const v = new Map<K, V>();
-			for ( let i = 0; i < size; ++i ) {
-				const t = f( this );
-				v.set( t[ 0 ], t[ 1 ] );
-			}
-			return v;
+		const v = new Map<K, V>();
+		for ( let i = 0; i < size; ++i ) {
+			const t = f( this );
+			v.set( t[ 0 ], t[ 1 ] );
 		}
-		return null;
+		return v;
 	}
 
 	write_map<K, V>( m: Map< K, V>, f: ( v: [ K, V ], msg: Binary_Message ) => void ): void {
-		const size = m != null ? m.size : null;
+		const size = Math.min( m.size, __MSG_MAX_NAT32_VALUE );
 		this.write_length( size );
-		if ( size != null ) {
-			m.forEach( ( val, key ) => f( [ key, val ], this ) );
-		}
+		m.forEach( ( val, key ) => f( [ key, val ], this ) );
 	}
 
 	clone(): Binary_Message {
-		return new Binary_Message( this.data() );
-	}
-
-	clone_header(): Binary_Message {
-		return new Binary_Message( this.header() );
-	}
-
-	header_string(): string {
-		return `[${ this._write_offset }] <${ this.get_nat128_header().toString( 16 ) }>`;
+		return new Binary_Message( this._topic, this._data.slice( 0, this._write_offset ) );
 	}
 
 	toString(): string {
-		const bytes = Array.from( new Uint8Array( this._data ) ).slice( 12, this._write_offset );
-		return `${ this.header_string() } ${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
+		const bytes = Array.from( new Uint8Array( this._data ) ).slice( 0, this._write_offset );
+		return `[${ this.topic }] ${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
 	}
 
 }
