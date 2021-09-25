@@ -20,10 +20,8 @@
 		"Protocol",
 		"serialize",
 		"deserialize",
-		"encode",
-		"decode",
-		"connection port",
-		"subscription pool",
+		"connection",
+		"subscription",
 		"websocket"
 	],
 	"scripts": {
