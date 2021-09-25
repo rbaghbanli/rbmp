@@ -11,7 +11,7 @@
 		"moduleResolution": "node",
 		"noImplicitReturns": true,
 		"outDir": "./dst",
-		"sourceMap": false,
+		"sourceMap": true,
 		"strict": true,
 		"stripInternal": true,
 		"target": "es2017",

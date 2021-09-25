@@ -1,10 +1,10 @@
 import Binary_Message from '../export/binary-message';
 
-class Binary_Message_Test {
+export class Binary_Message_Test {
 
 	test_read_write_message(): number {
 		let passed = 0, failed = 0;
-		console.log( `test message.test_read_write_message started` );
+		console.log( `Binary_Message_Test.test_read_write_message started` );
 		[
 			[ 255, 'byte' ],
 			[ 600, 'int16',  ],
@@ -12,15 +12,15 @@ class Binary_Message_Test {
 			[ -5000, 'int32' ],
 			[ 800000, 'nat32' ],
 			[ 8000.505, 'num64' ],
-			[ new Uint8Array( [ 65, 66, 67, 68, 255, 0, 0, 10 ] ).buffer, 'buf64' ],
-			[ new Uint8Array( [ 0, 0, 65, 66, 67, 68, 0, 0, 255, 0, 255, 0, 65, 66, 67, 68 ] ).buffer, 'buf128' ],
+			[ new Uint8Array( [ 65, 66, 67, 68, 255, 0, 0, 10 ] ), 'buf64' ],
+			[ new Uint8Array( [ 0, 0, 65, 66, 67, 68, 0, 0, 255, 0, 255, 0, 65, 66, 67, 68 ] ), 'buf128' ],
 			[ 'abcd', 'str64' ],
 			[ 'abcdefgh', 'str128' ],
-			[ null, 'buffer' ],
-			[ new Uint8Array().buffer, 'buffer' ],
-			[ new Uint8Array( [ 0, 0, 0, 0, 66, 67, 68, 255 ] ).buffer, 'buffer' ],
-			[ new Uint8Array( [ 255, 0, 65, 66, 67, 68, 0, 0, 255, 0, 0, 0, 0 ] ).buffer, 'buffer' ],
-			[ null, 'string' ],
+			[ new Uint8Array(), 'buffer' ],
+			[ new Uint8Array(), 'buffer' ],
+			[ new Uint8Array( [ 0, 0, 0, 0, 66, 67, 68, 255 ] ), 'buffer' ],
+			[ new Uint8Array( [ 255, 0, 65, 66, 67, 68, 0, 0, 255, 0, 0, 0, 0 ] ), 'buffer' ],
+			[ '\'', 'string' ],
 			[ '', 'string' ],
 			[ ' Test - ////', 'string' ],
 			[ 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et' +
@@ -60,7 +60,7 @@ class Binary_Message_Test {
 				case 'buf64':
 				case 'buf128':
 				case 'buffer': {
-					const buf = val as ArrayBuffer | SharedArrayBuffer;
+					const buf = ( val as Uint8Array ).buffer;
 					let tbuf: ArrayBuffer | null;
 					switch ( type ) {
 						case 'buf64': msg.write_buf( buf ); tbuf = msg.read_buf( 8 ); break;
@@ -98,11 +98,11 @@ class Binary_Message_Test {
 				++passed;
 			}
 			else {
-				console.error( `serialization test failed on ${ v } expected ${ val } for ${ type }` );
+				console.error( `test failed on ${ v } expected ${ val } for ${ type }` );
 				++failed;
 			}
 		} );
-		console.log( `serialization test finished: passed ${ passed } failed ${ failed }` );
+		console.log( `test finished: passed ${ passed } failed ${ failed }` );
 		return failed;
 	}
 

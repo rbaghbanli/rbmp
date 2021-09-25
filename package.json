@@ -33,6 +33,8 @@
 		"debug": "tsc --build",
 		"prebuild": "npm run clean",
 		"build": "tsc --build",
+		"pretest": "npm run build",
+		"test": "node dst/test",
 		"prepare": "npm run build"
 	},
 	"license": "MIT",

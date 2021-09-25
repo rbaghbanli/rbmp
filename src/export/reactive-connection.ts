@@ -2,17 +2,15 @@ import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
 import { delay, filter, map, mergeMap, take, tap } from 'rxjs/operators';
 import Binary_Message from './binary-message';
 
-const __MAX_PUBLICATION_COUNT = 0xffffffff;
-
 export default class Reactive_Connection {
 
-	private _conn_factory: () => any;
-	private _conn_attempts: number;
-	private _conn_interval: number;
-	private _conn: any;
-	private _msg$ = new Subject<Binary_Message>();
-	private _state$ = new BehaviorSubject<boolean>( false );
-	private _error$ = new Subject<string>();
+	protected _msg$ = new Subject<Binary_Message>();
+	protected _state$ = new BehaviorSubject<boolean>( false );
+	protected _error$ = new Subject<string>();
+	protected _conn_factory: () => any;
+	protected _conn_attempts: number;
+	protected _conn_interval: number;
+	protected _conn: any;
 
 	constructor(
 		conn_factory: () => any,
@@ -109,23 +107,6 @@ export default class Reactive_Connection {
 		return this.send( msg ).pipe(
 			mergeMap( () => this.wait( m => m.topic === msg.topic ) ),
 			take( 1 )
-		);
-	}
-
-	subscribe( topic: string, count: number = 0xffffffff ): Observable<Binary_Message> {
-		const msg = new Binary_Message( topic );
-		msg.write_length( count );
-		return this.send( msg ).pipe(
-			tap( () => console.debug( `Reactive connection: subscribed to message ${ msg.topic }` ) ),
-			mergeMap( () => this.wait( m => m.topic === msg.topic ) )
-		);
-	}
-
-	unsubscribe( topic: string ): Observable<void> {
-		const msg = new Binary_Message( topic );
-		msg.write_length( 0 );
-		return this.send( msg ).pipe(
-			tap( () => console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` ) )
 		);
 	}
 
