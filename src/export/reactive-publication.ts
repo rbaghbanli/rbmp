@@ -7,9 +7,9 @@ export default class Reactive_Publication {
 	protected _subs = new Map<string, Map<any, number>>();
 
 	ping(): number {
+		const sent = new Set<any>();
 		try {
 			const msg = new Binary_Message();
-			const sent = new Set<any>();
 			for ( const [ topic, conns ] of this._subs ) {
 				for ( const [ conn, count ] of conns ) {
 					if ( !sent.has( conn ) ) {
@@ -25,15 +25,15 @@ export default class Reactive_Publication {
 					}
 				}
 			}
-			return sent.size;
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to ping connections on error ${ exc }` );
 		}
-		return 0;
+		return sent.size;
 	}
 
-	publish( msg: Binary_Message, single?: boolean ): boolean {
+	publish( msg: Binary_Message, max?: number ): number {
+		let num = 0;
 		try {
 			let conns = this._subs.get( msg.topic );
 			if ( conns ) {
@@ -45,8 +45,9 @@ export default class Reactive_Publication {
 						else if ( count > 1 ) {
 							conns.set( conn, count - 1 );
 						}
-						if ( single ) {
-							return false;
+						++num;
+						if ( max && num >= max ) {
+							return num;
 						}
 					}
 					else {
@@ -61,10 +62,10 @@ export default class Reactive_Publication {
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to publish message ${ msg.topic } on error ${ exc }` );
 		}
-		return true;
+		return num;
 	}
 
-	subscribe( conn: object, msg?: Binary_Message ): number {
+	subscribe( conn: any, msg?: Binary_Message ): number {
 		try {
 			if ( msg ) {
 				const count = msg.read_length();
@@ -102,11 +103,11 @@ export default class Reactive_Publication {
 		return 0;
 	}
 
-	send( conn: any, msg: Binary_Message ): boolean {
+	send( conn: any, msg: Binary_Message ): number {
 		try {
 			if ( conn.readyState === WebSocket.OPEN ) {
 				conn.send( msg.to_buffer() );
-				return true;
+				return 1;
 			}
 			else {
 				console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
@@ -116,7 +117,7 @@ export default class Reactive_Publication {
 			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );
 		}
 		setTimeout( () => conn.close( __WS_INTERNAL_ERROR ), 0 );
-		return false;
+		return 0;
 	}
 
 }
