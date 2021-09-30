@@ -22,14 +22,23 @@ export default class Reactive_Connection {
 		this._conn_interval = Math.max( conn_interval, 10 );
 	}
 
+	/**
+		Returns stream of reactive connection state changes
+	*/
 	stream_state(): Observable<boolean> {
 		return this._state$;
 	}
 
+	/**
+		Returns stream of reactive connection errors
+	*/
 	stream_error(): Observable<string> {
 		return this._error$;
 	}
 
+	/**
+		Opens reactive connection
+	*/
 	open(): void {
 		try {
 			if ( !this._conn || this._conn.readyState > 1 ) {
@@ -65,6 +74,9 @@ export default class Reactive_Connection {
 		}
 	}
 
+	/**
+		Closes reactive connection
+	*/
 	close(): void {
 		try {
 			if ( this._conn && this._conn.readyState === 1 ) {
@@ -76,6 +88,10 @@ export default class Reactive_Connection {
 		this._state$.next( false );
 	}
 
+	/**
+		Returns stream of filtered binary messages
+		@param predicate function to filter messages
+	*/
 	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._msg$.pipe(
 			filter( predicate ),
@@ -83,6 +99,10 @@ export default class Reactive_Connection {
 		);
 	}
 
+	/**
+		Sends message and returns observable of the completion event
+		@param msg binary message to send
+	*/
 	send( msg: Binary_Message ): Observable<void> {
 		if ( this._conn && this._conn.readyState === 1 ) {
 			this._conn.send( msg.to_buffer() );
@@ -103,6 +123,10 @@ export default class Reactive_Connection {
 		}
 	}
 
+	/**
+		Sends message and returns observable of a response message
+		@param msg binary message to send as a request
+	*/
 	post( msg: Binary_Message ): Observable<Binary_Message> {
 		return this.send( msg ).pipe(
 			mergeMap( () => this.wait( m => m.topic === msg.topic ) ),

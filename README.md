@@ -18,8 +18,12 @@ Reactive connection is used to send binary message over websocket connection,
  and wait for all messages on specific topic.
 
 
+## Reactive Publication
+Reactive publication provides functionality to publishing messages to reactive connections.
+
+
 ## Reactive Subscription
-Reactive subscription provides management of subscription stream of publication service.
+Reactive subscription provides functionality to manage message subscription stream.
 
 
 ## Creating connection in browser app

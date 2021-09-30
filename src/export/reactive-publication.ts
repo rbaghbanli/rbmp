@@ -6,6 +6,10 @@ export default class Reactive_Publication {
 
 	protected _subs = new Map<string, Map<any, number>>();
 
+	/**
+		Pings all connections for all subscriptions and
+			returns number of pinged connections
+	*/
 	ping(): number {
 		const sent = new Set<any>();
 		try {
@@ -32,7 +36,12 @@ export default class Reactive_Publication {
 		return sent.size;
 	}
 
-	publish( msg: Binary_Message, max?: number ): number {
+	/**
+		Sends message to all subscribed connections and
+			returns number of messages sent to connections subscribed to message topic
+		@param msg binary message to send
+	*/
+	publish( msg: Binary_Message ): number {
 		let num = 0;
 		try {
 			let conns = this._subs.get( msg.topic );
@@ -46,9 +55,6 @@ export default class Reactive_Publication {
 							conns.set( conn, count - 1 );
 						}
 						++num;
-						if ( max && num >= max ) {
-							return num;
-						}
 					}
 					else {
 						conns.delete( conn );
@@ -65,6 +71,13 @@ export default class Reactive_Publication {
 		return num;
 	}
 
+	/**
+		Subscribes or unsubscribes connection and
+			returns maximum number of messages subsctiption requires as defined in the message
+		@param conn connection to subscribe or unsubscribe
+		@param msg optional binary message to subscribe,
+			if omitted the connection is unsubscribed from all messages
+	*/
 	subscribe( conn: any, msg?: Binary_Message ): number {
 		try {
 			if ( msg ) {
@@ -103,6 +116,12 @@ export default class Reactive_Publication {
 		return 0;
 	}
 
+	/**
+		Sends message to connection and
+			returns 1 is message is successfully sent, 0 otherwise
+		@param conn connection to send message to
+		@param msg binary message to send
+	*/
 	send( conn: any, msg: Binary_Message ): number {
 		try {
 			if ( conn.readyState === WebSocket.OPEN ) {

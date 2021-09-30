@@ -3,7 +3,7 @@ import { mergeMap, takeUntil, tap } from 'rxjs/operators';
 import Binary_Message from './binary-message';
 import Reactive_Connection from './reactive-connection';
 
-const __MAX_PUBLICATION_COUNT = 0xffffffff;
+const __MAX_PUBLICATION_COUNT = Math.pow( 2, 32 ) - 1;
 
 export default class Reactive_Subscription {
 
@@ -19,6 +19,10 @@ export default class Reactive_Subscription {
 		this._topic = topic;
 	}
 
+	/**
+		Starts subscription and returns subscription message stream
+		@param count optional maximum count of messages to receive
+	*/
 	start( count: number = __MAX_PUBLICATION_COUNT ): Observable<Binary_Message> {
 		const msg = new Binary_Message( this._topic );
 		msg.write_length( count );
@@ -29,6 +33,10 @@ export default class Reactive_Subscription {
 		);
 	}
 
+	/**
+		Stops subscription and returns observable of the completion event
+		@param count optional maximum count of messages to receive
+	*/
 	stop(): Observable<void> {
 		const msg = new Binary_Message( this._topic );
 		msg.write_length( 0 );
