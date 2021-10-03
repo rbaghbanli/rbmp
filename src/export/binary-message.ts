@@ -1,5 +1,4 @@
 const __MSG_MAX_NAT32_VALUE = Math.pow( 2, 32 ) - 1;
-const __MSG_MIN_INT32_VALUE = -Math.pow( 2, 31 );
 const __MSG_MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export default class Binary_Message {
@@ -236,7 +235,7 @@ export default class Binary_Message {
 	}
 
 	write_bool( v: boolean ): void {
-		this.write_byte( v ? 255 : 0 );
+		this.write_byte( v ? 0xff : 0 );
 	}
 
 	read_length(): number {
@@ -247,22 +246,20 @@ export default class Binary_Message {
 		this.write_nat32( Math.min( v, __MSG_MAX_NAT32_VALUE ) );
 	}
 
-	read_date(): Date | null {
-		const v = this.read_int32();
-		return v === __MSG_MIN_INT32_VALUE ? null : new Date( v * __MSG_MS_PER_DAY );
+	read_date(): Date {
+		return new Date( this.read_int32() * __MSG_MS_PER_DAY );
 	}
 
-	write_date( v: Date | null | undefined ): void {
-		this.write_int32( v ? ( v.getTime() / __MSG_MS_PER_DAY ) : __MSG_MIN_INT32_VALUE );
+	write_date( v: Date ): void {
+		this.write_int32( v.getTime() / __MSG_MS_PER_DAY );
 	}
 
-	read_time(): Date | null {
-		const v = this.read_num64();
-		return v === Number.MIN_SAFE_INTEGER ? null : new Date( v );
+	read_time(): Date {
+		return new Date( this.read_num64() );
 	}
 
-	write_time( v: Date | null | undefined ): void {
-		this.write_num64( v ? v.getTime() : Number.MIN_SAFE_INTEGER );
+	write_time( v: Date ): void {
+		this.write_num64( v.getTime() );
 	}
 
 	read_binary(): DataView {
@@ -291,6 +288,20 @@ export default class Binary_Message {
 	write_string( v: string ): void {
 		this.write_length( v.length );
 		this.write_str( v );
+	}
+
+	read_nullable<T>( f: ( msg: Binary_Message ) => T ): T | null {
+		return this.read_bool() ? f( this ) : null;
+	}
+
+	write_nullable<T>( v: T | null | undefined, f: ( v: T, msg: Binary_Message ) => void ): void {
+		if ( v != null ) {
+			this.write_bool( true );
+			f( v, this );
+		}
+		else {
+			this.write_bool( false );
+		}
 	}
 
 	read_array<T>( f: ( msg: Binary_Message ) => T ): T[] {
