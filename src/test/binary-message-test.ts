@@ -1,4 +1,4 @@
-import Binary_Message from '../export/binary-message';
+import { Binary_Message } from '../binary-message';
 
 export class Binary_Message_Test {
 
@@ -7,7 +7,7 @@ export class Binary_Message_Test {
 		console.log( `Binary_Message_Test.test_read_write_message started` );
 		[
 			[ 255, 'byte' ],
-			[ 600, 'int16',  ],
+			[ 600, 'int16', ],
 			[ 6000, 'nat16' ],
 			[ -5000, 'int32' ],
 			[ 800000, 'nat32' ],
@@ -36,36 +36,37 @@ export class Binary_Message_Test {
 				case 'byte':
 					msg.write_byte( val as number );
 					v = msg.read_byte();
-				break;
+					break;
 				case 'int16':
 					msg.write_int16( val as number );
 					v = msg.read_int16();
-				break;
+					break;
 				case 'nat16':
 					msg.write_nat16( val as number );
 					v = msg.read_nat16();
-				break;
+					break;
 				case 'int32':
 					msg.write_int32( val as number );
 					v = msg.read_int32();
-				break;
+					break;
 				case 'nat32':
 					msg.write_nat32( val as number );
 					v = msg.read_nat32();
-				break;
+					break;
 				case 'num64':
 					msg.write_num64( val as number );
 					v = msg.read_num64();
-				break;
+					break;
 				case 'buf64':
 				case 'buf128':
 				case 'buffer': {
 					const buf = ( val as Uint8Array ).buffer;
-					let tbuf: ArrayBuffer | null;
+					let tbuf: ArrayBuffer | null = null;
 					switch ( type ) {
 						case 'buf64': msg.write_buf( buf ); tbuf = msg.read_buf( 8 ); break;
 						case 'buf128': msg.write_buf( buf ); tbuf = msg.read_buf( 16 ); break;
 						case 'buffer': msg.write_buffer( buf ); tbuf = msg.read_buffer(); break;
+						default: break;
 					}
 					const bin = new Uint8Array( buf );
 					const tbin = tbuf ? new Uint8Array( tbuf ) : null;
@@ -77,22 +78,25 @@ export class Binary_Message_Test {
 						v = tbin;
 					}
 				}
-				break;
+					break;
 				case 'str64':
 				case 'str128':
 				case 'string': {
 					const str = val as string;
-					let tstr: string | null;
+					let tstr: string | null = null;
 					switch ( type ) {
 						case 'str64': msg.write_str( str ); tstr = msg.read_str( 4 ); break;
 						case 'str128': msg.write_str( str ); tstr = msg.read_str( 8 ); break;
 						case 'string': msg.write_string( str ); tstr = msg.read_string(); break;
+						default: break;
 					}
 					if ( str === tstr ) {
 						v = val;
 					}
 				}
-				break;
+					break;
+				default:
+					break;
 			}
 			if ( v === val ) {
 				++passed;

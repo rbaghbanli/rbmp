@@ -1,7 +1,7 @@
 const __MSG_MAX_NAT32_VALUE = Math.pow( 2, 32 ) - 1;
 const __MSG_MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export default class Binary_Message {
+export class Binary_Message {
 
 	protected _topic: string;
 	protected _data: ArrayBuffer;
@@ -10,7 +10,7 @@ export default class Binary_Message {
 	protected _read_offset: number;
 
 	constructor( topic?: string, data?: ArrayBufferLike ) {
-		this._topic = topic ? ( topic.length > __MSG_MAX_NAT32_VALUE ? topic.slice( 0, __MSG_MAX_NAT32_VALUE ): topic ) : '';
+		this._topic = topic ? ( topic.length > __MSG_MAX_NAT32_VALUE ? topic.slice( 0, __MSG_MAX_NAT32_VALUE ) : topic ) : '';
 		this._data = data ?? new ArrayBuffer( 0 );
 		this._view = new DataView( this._data );
 		this._read_offset = 0;
@@ -33,7 +33,7 @@ export default class Binary_Message {
 
 	static from_buffer( buffer: ArrayBufferLike ): Binary_Message {
 		const view = new DataView( buffer );
-		let topic_length = view.getUint32( 0 );
+		const topic_length = view.getUint32( 0 );
 		let topic = '';
 		let i = 4;
 		for ( let c = 0; c < topic_length && i < buffer.byteLength; ++c, i += 2 ) {
@@ -294,10 +294,10 @@ export default class Binary_Message {
 		return this.read_bool() ? f( this ) : null;
 	}
 
-	write_nullable<T>( v: T | null | undefined, f: ( v: T, msg: Binary_Message ) => void ): void {
-		if ( v != null ) {
+	write_nullable<T>( n: T | null | undefined, f: ( v: T, msg: Binary_Message ) => void ): void {
+		if ( n != null ) {
 			this.write_bool( true );
-			f( v, this );
+			f( n, this );
 		}
 		else {
 			this.write_bool( false );
@@ -317,7 +317,7 @@ export default class Binary_Message {
 		const length = Math.min( a.length, __MSG_MAX_NAT32_VALUE );
 		this.write_length( length );
 		if ( length != null ) {
-			for ( let i = 0; i < length; ++ i ) {
+			for ( let i = 0; i < length; ++i ) {
 				f( a[ i ], this );
 			}
 		}

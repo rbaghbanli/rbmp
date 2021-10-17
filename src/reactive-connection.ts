@@ -1,8 +1,8 @@
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
-import { delay, filter, map, mergeMap, take, tap } from 'rxjs/operators';
-import Binary_Message from './binary-message';
+import { delay, filter, map, mergeMap, take } from 'rxjs/operators';
+import { Binary_Message } from './binary-message';
 
-export default class Reactive_Connection {
+export class Reactive_Connection {
 
 	protected _msg$ = new Subject<Binary_Message>();
 	protected _state$ = new BehaviorSubject<boolean>( false );
@@ -14,8 +14,8 @@ export default class Reactive_Connection {
 
 	constructor(
 		conn_factory: () => any,
-		conn_attempts: number = 5,
-		conn_interval: number = 500
+		conn_attempts = 5,
+		conn_interval = 500
 	) {
 		this._conn_factory = conn_factory;
 		this._conn_attempts = Math.max( conn_attempts, 1 );
@@ -23,14 +23,16 @@ export default class Reactive_Connection {
 	}
 
 	/**
-		Returns stream of reactive connection state changes
+	 	Gets the observable of reactive connection state changes
+		@returns the stream of reactive connection state changes
 	*/
 	stream_state(): Observable<boolean> {
 		return this._state$;
 	}
 
 	/**
-		Returns stream of reactive connection errors
+	 	Gets the observable of reactive connection errors
+		@returns the stream of reactive connection errors
 	*/
 	stream_error(): Observable<string> {
 		return this._error$;
@@ -89,8 +91,9 @@ export default class Reactive_Connection {
 	}
 
 	/**
-		Returns stream of filtered binary messages
+		Gets the observable of reactive connection messages
 		@param predicate function to filter messages
+		@returns the stream of filtered binary messages
 	*/
 	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._msg$.pipe(
@@ -100,8 +103,9 @@ export default class Reactive_Connection {
 	}
 
 	/**
-		Sends message and returns observable of the completion event
+		Sends message thru reactive connection
 		@param msg binary message to send
+		@returns the observable of the completion event
 	*/
 	send( msg: Binary_Message ): Observable<void> {
 		if ( this._conn && this._conn.readyState === 1 ) {
@@ -109,23 +113,22 @@ export default class Reactive_Connection {
 			console.debug( `Reactive connection: sent message ${ msg.topic }` );
 			return of( undefined );
 		}
-		else {
-			this._state$.pipe(
-				filter( on => !on ),
-				delay( this._conn_interval ),
-				take( this._conn_attempts )
-			).subscribe( () => this.open() );
-			return this._state$.pipe(
-				filter( on => on ),
-				mergeMap( () => this.send( msg ) ),
-				take( 1 )
-			);
-		}
+		this._state$.pipe(
+			filter( on => !on ),
+			delay( this._conn_interval ),
+			take( this._conn_attempts )
+		).subscribe( () => this.open() );
+		return this._state$.pipe(
+			filter( on => on ),
+			mergeMap( () => this.send( msg ) ),
+			take( 1 )
+		);
 	}
 
 	/**
-		Sends message and returns observable of a response message
+		Sends request message thru reactive conneciton
 		@param msg binary message to send as a request
+		@returns the observable of a response message
 	*/
 	post( msg: Binary_Message ): Observable<Binary_Message> {
 		return this.send( msg ).pipe(

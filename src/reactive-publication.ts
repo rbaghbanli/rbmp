@@ -1,14 +1,14 @@
-import Binary_Message from './binary-message';
+import { Binary_Message } from './binary-message';
 
 const __WS_INTERNAL_ERROR = 1011;
 
-export default class Reactive_Publication {
+export class Reactive_Publication {
 
 	protected _subs = new Map<string, Map<any, number>>();
 
 	/**
-		Pings all connections for all subscriptions and
-			returns number of pinged connections
+		Pings all connections for all subscriptions
+		@returns the number of pinged connections
 	*/
 	ping(): number {
 		const sent = new Set<any>();
@@ -37,14 +37,14 @@ export default class Reactive_Publication {
 	}
 
 	/**
-		Sends message to all subscribed connections and
-			returns number of messages sent to connections subscribed to message topic
+		Sends message to all subscribed connections
 		@param msg binary message to send
+		@returns the number of messages sent to connections subscribed to message topic
 	*/
 	publish( msg: Binary_Message ): number {
 		let num = 0;
 		try {
-			let conns = this._subs.get( msg.topic );
+			const conns = this._subs.get( msg.topic );
 			if ( conns ) {
 				for ( const [ conn, count ] of conns ) {
 					if ( this.send( conn, msg ) ) {
@@ -72,18 +72,18 @@ export default class Reactive_Publication {
 	}
 
 	/**
-		Subscribes or unsubscribes connection and
-			returns maximum number of messages subsctiption requires as defined in the message
+		Subscribes or unsubscribes connection
 		@param conn connection to subscribe or unsubscribe
 		@param msg optional binary message to subscribe,
 			if omitted the connection is unsubscribed from all messages
+		@returns the maximum number of messages subsctiption requires as defined in the message
 	*/
 	subscribe( conn: any, msg?: Binary_Message ): number {
 		try {
 			if ( msg ) {
 				const count = msg.read_length();
 				let conns = this._subs.get( msg.topic );
-				if ( count == 0 ) {	// unsubscribe connection from topic
+				if ( count === 0 ) {	// unsubscribe connection from topic
 					if ( conns ) {
 						conns.delete( conn );
 						if ( conns.size === 0 ) {
@@ -99,16 +99,14 @@ export default class Reactive_Publication {
 				}
 				return count;
 			}
-			else {	// unsubscribe connection from all topics
-				this._subs.forEach(
-					( conns, topic ) => {
-						conns.delete( conn );
-						if ( conns.size === 0 ) {
-							this._subs.delete( topic );
-						}
+			this._subs.forEach( // unsubscribe connection from all topics
+				( conns, topic ) => {
+					conns.delete( conn );
+					if ( conns.size === 0 ) {
+						this._subs.delete( topic );
 					}
-				);
-			}
+				}
+			);
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to subscribe connection on error ${ exc }` );
@@ -117,10 +115,10 @@ export default class Reactive_Publication {
 	}
 
 	/**
-		Sends message to connection and
-			returns 1 is message is successfully sent, 0 otherwise
+		Sends message to connection
 		@param conn connection to send message to
 		@param msg binary message to send
+		@returns 1 is message is successfully sent, 0 otherwise
 	*/
 	send( conn: any, msg: Binary_Message ): number {
 		try {
@@ -128,9 +126,7 @@ export default class Reactive_Publication {
 				conn.send( msg.to_buffer() );
 				return 1;
 			}
-			else {
-				console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
-			}
+			console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );

@@ -1,11 +1,11 @@
 import { Observable, Subject } from 'rxjs';
 import { mergeMap, takeUntil, tap } from 'rxjs/operators';
-import Binary_Message from './binary-message';
-import Reactive_Connection from './reactive-connection';
+import { Binary_Message } from './binary-message';
+import { Reactive_Connection } from './reactive-connection';
 
 const __MAX_PUBLICATION_COUNT = Math.pow( 2, 32 ) - 1;
 
-export default class Reactive_Subscription {
+export class Reactive_Subscription {
 
 	protected _end$ = new Subject();
 	protected _conn: Reactive_Connection;
@@ -20,8 +20,9 @@ export default class Reactive_Subscription {
 	}
 
 	/**
-		Starts subscription and returns subscription message stream
+		Starts reactive subscription
 		@param count optional maximum count of messages to receive
+		@returns the subscription message stream
 	*/
 	start( count: number = __MAX_PUBLICATION_COUNT ): Observable<Binary_Message> {
 		const msg = new Binary_Message( this._topic );
@@ -34,8 +35,9 @@ export default class Reactive_Subscription {
 	}
 
 	/**
-		Stops subscription and returns observable of the completion event
+		Stops subscription
 		@param count optional maximum count of messages to receive
+		@returns the observable of the completion event
 	*/
 	stop(): Observable<void> {
 		const msg = new Binary_Message( this._topic );
@@ -46,7 +48,7 @@ export default class Reactive_Subscription {
 					this._end$.next( undefined );
 					this._end$.complete();
 					this._end$ = new Subject();
-					console.debug( `Reactive subscription: stopped streaming message ${ msg.topic }` )
+					console.debug( `Reactive subscription: stopped streaming message ${ msg.topic }` );
 				}
 			)
 		);

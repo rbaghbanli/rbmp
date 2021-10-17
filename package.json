@@ -1,6 +1,6 @@
 {
 	"name": "rbmp",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"description": "Reactive Ninary Messaging Protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
@@ -26,11 +26,11 @@
 	],
 	"scripts": {
 		"clean": "rimraf dst/* && rimraf *.tgz",
-		"lint": "tslint --project tsconfig.json",
-		"predebug": "npm run clean",
-		"debug": "tsc --build",
+		"lint": "eslint ./src --ext .ts",
 		"prebuild": "npm run clean",
 		"build": "tsc --build",
+		"predebug": "npm run clean",
+		"debug": "tsc --build",
 		"pretest": "npm run build",
 		"test": "node dst/test",
 		"prepare": "npm run build"
@@ -41,12 +41,13 @@
 		"url": "https://github.com/rbaghbanli/rbmp.git"
 	},
 	"dependencies": {
-		"rxjs": "~7.3.0"
+		"rxjs": "~7.4.0"
 	},
 	"devDependencies": {
-		"@types/ws": "~7.4.7",
+		"@typescript-eslint/parser": "~5.0.0",
+		"@typescript-eslint/eslint-plugin": "~5.0.0",
+		"eslint": "~8.0.1",
 		"rimraf": "~3.0.2",
-		"eslint": "~7.32.0",
-		"typescript": "~4.4.3"
+		"typescript": "~4.4.4"
 	}
 }
