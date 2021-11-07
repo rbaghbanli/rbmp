@@ -79,19 +79,19 @@ Sample code to subscribe to and unsubscribe from server data stream:
 
 ```ts
 ...
-// create subscription on topic 'MyTopic'
+// create a subscription on topic 'MyTopic'
 const subs1 = new Reactive_Subscription( conn, 'MyTopic' );
 // stream first 500 messages on topic 'MyTopic'
 const stream_500: Observable<Binary_Message> =
 	subs1.start( 500 );
 ...
-// create subscription on topic 'MyTopic2'
+// create a subscription on topic 'MyTopic2'
 const subs2 = new Reactive_Subscription( conn, 'MyTopic2' );
 // stream all messages on topic 'MyTopic2'
 const stream_all: Observable<Binary_Message> =
 	subs2.start();
 ...
-// unsubscribe from streams
+// unsubscribe from the streams
 subs1.stop();
 subs2.stop();
 ...
