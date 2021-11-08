@@ -10,20 +10,25 @@ export class Reactive_Publication {
 		Pings all connections for all subscriptions
 		@returns the number of pinged connections
 	*/
-	ping(): number {
+	ping( conn?: any ): number {
 		const sent = new Set<any>();
 		try {
 			const msg = new Binary_Message();
-			for ( const [ topic, conns ] of this._subs ) {
-				for ( const [ conn, count ] of conns ) {
-					if ( !sent.has( conn ) ) {
-						if ( this.send( conn, msg ) ) {
-							sent.add( conn );
-						}
-						else {
-							conns.delete( conn );
-							if ( conns.size === 0 ) {
-								this._subs.delete( topic );
+			if ( conn && this.send( conn, msg ) ) {
+				sent.add( conn );
+			}
+			else {
+				for ( const [ topic, conns ] of this._subs ) {
+					for ( const [ conn, count ] of conns ) {
+						if ( !sent.has( conn ) ) {
+							if ( this.send( conn, msg ) ) {
+								sent.add( conn );
+							}
+							else {
+								conns.delete( conn );
+								if ( conns.size === 0 ) {
+									this._subs.delete( topic );
+								}
 							}
 						}
 					}
