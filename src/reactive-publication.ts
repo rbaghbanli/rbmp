@@ -53,11 +53,11 @@ export class Reactive_Publication {
 			if ( conns ) {
 				for ( const [ conn, count ] of conns ) {
 					if ( this.send( conn, msg ) ) {
-						if ( count === 1 ) {
-							conns.delete( conn );
-						}
-						else if ( count > 1 ) {
+						if ( count > 1 ) {
 							conns.set( conn, count - 1 );
+						}
+						else {
+							conns.delete( conn );
 						}
 						++num;
 					}
