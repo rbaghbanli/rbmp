@@ -11,10 +11,7 @@ export class Reactive_Subscription {
 	protected _conn: Reactive_Connection;
 	protected _topic: string;
 
-	constructor(
-		conn: Reactive_Connection,
-		topic: string
-	) {
+	constructor( conn: Reactive_Connection, topic: string ) {
 		this._conn = conn;
 		this._topic = topic;
 	}

@@ -12,11 +12,7 @@ export class Reactive_Connection {
 	protected _conn_interval: number;
 	protected _conn: any;
 
-	constructor(
-		conn_factory: () => any,
-		conn_attempts = 5,
-		conn_interval = 500
-	) {
+	constructor( conn_factory: () => any, conn_attempts = 5, conn_interval = 500 ) {
 		this._conn_factory = conn_factory;
 		this._conn_attempts = Math.max( conn_attempts, 1 );
 		this._conn_interval = Math.max( conn_interval, 10 );
