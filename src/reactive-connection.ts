@@ -7,13 +7,15 @@ export class Reactive_Connection {
 	protected _msg$ = new Subject<Binary_Message>();
 	protected _state$ = new BehaviorSubject<boolean>( false );
 	protected _error$ = new Subject<string>();
-	protected _conn_factory: () => any;
-	protected _conn_attempts: number;
-	protected _conn_interval: number;
+	protected readonly _conn_factory: () => any;
+	protected readonly _conn_ready: number;
+	protected readonly _conn_attempts: number;
+	protected readonly _conn_interval: number;
 	protected _conn: any;
 
-	constructor( conn_factory: () => any, conn_attempts = 5, conn_interval = 500 ) {
+	constructor( conn_factory: () => any, conn_ready: number = 1, conn_attempts = 5, conn_interval = 500 ) {
 		this._conn_factory = conn_factory;
+		this._conn_ready = conn_ready;
 		this._conn_attempts = Math.max( conn_attempts, 1 );
 		this._conn_interval = Math.max( conn_interval, 10 );
 	}
@@ -39,7 +41,7 @@ export class Reactive_Connection {
 	*/
 	open(): void {
 		try {
-			if ( !this._conn || this._conn.readyState > 1 ) {
+			if ( !( this._conn && this._conn.readyState === this._conn_ready ) ) {
 				const conn = this._conn = this._conn_factory();
 				conn.binaryType = 'arraybuffer';
 				console.debug( `Reactive connection: websocket [${ conn.url }] connecting...` );
@@ -77,7 +79,7 @@ export class Reactive_Connection {
 	*/
 	close(): void {
 		try {
-			if ( this._conn && this._conn.readyState === 1 ) {
+			if ( this._conn && this._conn.readyState === this._conn_ready ) {
 				this._conn.close();
 			}
 		}
@@ -104,7 +106,7 @@ export class Reactive_Connection {
 		@returns the observable of the completion event
 	*/
 	send( msg: Binary_Message ): Observable<void> {
-		if ( this._conn && this._conn.readyState === 1 ) {
+		if ( this._conn && this._conn.readyState === this._conn_ready ) {
 			this._conn.send( msg.to_buffer() );
 			console.debug( `Reactive connection: sent message ${ msg.topic }` );
 			return of( undefined );

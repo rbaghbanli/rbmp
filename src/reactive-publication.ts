@@ -1,10 +1,15 @@
 import { Binary_Message } from './binary-message';
 
-const __WS_INTERNAL_ERROR = 1011;
-
 export class Reactive_Publication {
 
+	protected readonly _conn_ready: number;
+	protected readonly _conn_error: number;
 	protected _subs = new Map<string, Map<any, number>>();
+
+	constructor( conn_ready: number = 1, conn_error = 1011 ) {
+		this._conn_ready = conn_ready;
+		this._conn_error = conn_error;
+	}
 
 	/**
 		Pings all connections for all subscriptions
@@ -98,7 +103,7 @@ export class Reactive_Publication {
 				}
 				else {	// subscribe connection to topic
 					if ( !conns ) {
-						this._subs.set( msg.topic, conns = new Map<WebSocket, number>() );
+						this._subs.set( msg.topic, conns = new Map<any, number>() );
 					}
 					conns.set( conn, count );
 				}
@@ -127,7 +132,7 @@ export class Reactive_Publication {
 	*/
 	send( conn: any, msg: Binary_Message ): number {
 		try {
-			if ( conn.readyState === WebSocket.OPEN ) {
+			if ( conn && conn.readyState === this._conn_ready ) {
 				conn.send( msg.to_buffer() );
 				return 1;
 			}
@@ -136,7 +141,7 @@ export class Reactive_Publication {
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );
 		}
-		setTimeout( () => conn.close( __WS_INTERNAL_ERROR ), 0 );
+		setTimeout( () => conn.close( this._conn_error ), 0 );
 		return 0;
 	}
 
