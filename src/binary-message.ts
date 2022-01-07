@@ -189,7 +189,7 @@ export class Binary_Message {
 	}
 
 	read_bin( length: number ): DataView {
-		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		const len = Math.min( length || 0, __MSG_MAX_NAT32_VALUE );
 		return this.read( len, () => new DataView( this._data, this._read_offset, this._read_offset + len ) );
 	}
 
@@ -198,7 +198,7 @@ export class Binary_Message {
 	}
 
 	read_buf( length: number ): ArrayBuffer {
-		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		const len = Math.min( length || 0, __MSG_MAX_NAT32_VALUE );
 		return this.read( len, () => this._data.slice( this._read_offset, this._read_offset + len ) );
 	}
 
@@ -207,7 +207,7 @@ export class Binary_Message {
 	}
 
 	read_str( length: number ): string {
-		const len = Math.min( length, __MSG_MAX_NAT32_VALUE );
+		const len = Math.min( length || 0, __MSG_MAX_NAT32_VALUE );
 		return this.read( len << 1,
 			() => {
 				let v = '';
@@ -220,8 +220,8 @@ export class Binary_Message {
 	}
 
 	write_str( v: string ): void {
-		const len = Math.min( v.length, __MSG_MAX_NAT32_VALUE );
-		this.write( v.length << 1,
+		const len = Math.min( v.length || 0, __MSG_MAX_NAT32_VALUE );
+		this.write( len << 1,
 			() => {
 				for ( let c = 0, i = this._write_offset; c < len; ++c, i += 2 ) {
 					this._view.setUint16( i, v.charCodeAt( c ) );
@@ -243,7 +243,7 @@ export class Binary_Message {
 	}
 
 	write_length( v: number ): void {
-		this.write_nat32( Math.min( v, __MSG_MAX_NAT32_VALUE ) );
+		this.write_nat32( v );
 	}
 
 	read_date(): Date {
@@ -263,12 +263,11 @@ export class Binary_Message {
 	}
 
 	read_binary(): DataView {
-		const length = this.read_length();
-		return this.read_bin( length );
+		return this.read_bin( this.read_length() );
 	}
 
 	write_binary( v: DataView ): void {
-		this.write_length( v.byteLength );
+		this.write_length( Math.min( v.byteLength, __MSG_MAX_NAT32_VALUE ) );
 		this.write_bin( v );
 	}
 
@@ -277,7 +276,7 @@ export class Binary_Message {
 	}
 
 	write_buffer( v: ArrayBuffer ): void {
-		this.write_length( v.byteLength );
+		this.write_length( Math.min( v.byteLength, __MSG_MAX_NAT32_VALUE ) );
 		this.write_buf( v );
 	}
 
@@ -286,7 +285,7 @@ export class Binary_Message {
 	}
 
 	write_string( v: string ): void {
-		this.write_length( v.length );
+		this.write_length( Math.min( v.length, __MSG_MAX_NAT32_VALUE ) );
 		this.write_str( v );
 	}
 
@@ -316,10 +315,8 @@ export class Binary_Message {
 	write_array<T>( a: T[], f: ( v: T, msg: Binary_Message ) => void ): void {
 		const length = Math.min( a.length, __MSG_MAX_NAT32_VALUE );
 		this.write_length( length );
-		if ( length != null ) {
-			for ( let i = 0; i < length; ++i ) {
-				f( a[ i ], this );
-			}
+		for ( let i = 0; i < length; ++i ) {
+			f( a[ i ], this );
 		}
 	}
 
@@ -327,15 +324,21 @@ export class Binary_Message {
 		const size = this.read_length();
 		const v = new Set<K>();
 		for ( let i = 0; i < size; ++i ) {
-			v.add( f( this ) );
+			const t = f( this );
+			v.add( t );
 		}
 		return v;
 	}
 
 	write_set<K>( s: Set<K>, f: ( k: K, msg: Binary_Message ) => void ): void {
-		const size = Math.min( s.size, __MSG_MAX_NAT32_VALUE );
+		let size = Math.min( s.size, __MSG_MAX_NAT32_VALUE );
 		this.write_length( size );
-		s.forEach( k => f( k, this ) );
+		for ( const [ k ] of s.entries() ) {
+			if ( --size < 0 ) {
+				return;
+			}
+			f( k, this );
+		}
 	}
 
 	read_map<K, V>( f: ( msg: Binary_Message ) => [ K, V ] ): Map<K, V> {
@@ -349,9 +352,14 @@ export class Binary_Message {
 	}
 
 	write_map<K, V>( m: Map< K, V>, f: ( v: [ K, V ], msg: Binary_Message ) => void ): void {
-		const size = Math.min( m.size, __MSG_MAX_NAT32_VALUE );
+		let size = Math.min( m.size, __MSG_MAX_NAT32_VALUE );
 		this.write_length( size );
-		m.forEach( ( val, key ) => f( [ key, val ], this ) );
+		for ( const [ k, v ] of m ) {
+			if ( --size < 0 ) {
+				return;
+			}
+			f( [ k, v ], this );
+		}
 	}
 
 	clone(): Binary_Message {
