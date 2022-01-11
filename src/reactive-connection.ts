@@ -4,16 +4,16 @@ import { Binary_Message } from './binary-message';
 
 export class Reactive_Connection {
 
-	protected _msg$ = new Subject<Binary_Message>();
-	protected _state$ = new BehaviorSubject<boolean>( false );
-	protected _error$ = new Subject<string>();
 	protected readonly _conn_factory: () => any;
 	protected readonly _conn_ready: number;
 	protected readonly _conn_attempts: number;
 	protected readonly _conn_interval: number;
+	protected _message$ = new Subject<Binary_Message>();
+	protected _error$ = new Subject<string>();
+	protected _state$ = new BehaviorSubject<boolean>( false );
 	protected _conn: any;
 
-	constructor( conn_factory: () => any, conn_ready: number = 1, conn_attempts = 5, conn_interval = 500 ) {
+	constructor( conn_factory: () => any, conn_ready: number = 1, conn_attempts = 10, conn_interval = 1000 ) {
 		this._conn_factory = conn_factory;
 		this._conn_ready = conn_ready;
 		this._conn_attempts = Math.max( conn_attempts, 1 );
@@ -40,37 +40,41 @@ export class Reactive_Connection {
 		Opens reactive connection
 	*/
 	open(): void {
-		try {
-			if ( !( this._conn && this._conn.readyState === this._conn_ready ) ) {
-				const conn = this._conn = this._conn_factory();
-				conn.binaryType = 'arraybuffer';
-				console.debug( `Reactive connection: websocket [${ conn.url }] connecting...` );
-				conn.onopen = () => {
-					console.debug( `Reactive connection: websocket [${ conn.url }] connected` );
+		if ( !this._conn ) {
+			try {
+				this._conn = this._conn_factory();
+				this._conn.binaryType = 'arraybuffer';
+				const url = this._conn.url;
+				console.debug( `Reactive connection: websocket [${ url }] connecting...` );
+				this._conn.onopen = () => {
+					console.debug( `Reactive connection: websocket [${ url }] connected` );
 					this._state$.next( true );
 				};
-				conn.onclose = ( event: any ) => {
-					console.debug( `Reactive connection: websocket [${ conn.url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
+				this._conn.onclose = ( event: any ) => {
+					console.debug( `Reactive connection: websocket [${ url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
+					this._conn = undefined;
 					this._state$.next( false );
 				};
-				conn.onmessage = ( event: any ) => {
+				this._conn.onmessage = ( event: any ) => {
 					const msg = Binary_Message.from_buffer( event.data as ArrayBuffer );
 					if ( msg.is_blank ) {
 						console.debug( `Reactive connection: ping received` );
 					}
 					else {
 						console.debug( `Reactive connection: received message ${ msg.topic }` );
-						this._msg$.next( msg );
+						this._message$.next( msg );
 					}
 				};
-				conn.onerror = () => {
-					console.debug( `Reactive connection: websocket [${ conn.url }] error ` );
-					this._error$.next( `websocket [${ conn.url }] error` );
+				this._conn.onerror = () => {
+					console.debug( `Reactive connection: websocket [${ url }] error` );
+					this._error$.next( `websocket [${ url }] error` );
 				};
 			}
-		}
-		catch ( exc ) {
-			this._state$.next( false );
+			catch ( exc ) {
+				console.debug( `Reactive connection: failed to open websocket on error ${ exc }` );
+				this._error$.next( `failure to open connection` );
+				this.close();
+			}
 		}
 	}
 
@@ -79,11 +83,14 @@ export class Reactive_Connection {
 	*/
 	close(): void {
 		try {
-			if ( this._conn && this._conn.readyState === this._conn_ready ) {
+			if ( this._conn ) {
 				this._conn.close();
 			}
 		}
-		catch ( exc ) {}
+		catch ( exc ) {
+			console.debug( `Reactive connection: failed to close websocket on error ${ exc }` );
+			this._error$.next( `failure to close connection` );
+		}
 		this._conn = undefined;
 		this._state$.next( false );
 	}
@@ -94,7 +101,7 @@ export class Reactive_Connection {
 		@returns the stream of filtered binary messages
 	*/
 	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
-		return this._msg$.pipe(
+		return this._message$.pipe(
 			filter( predicate ),
 			map( msg => msg.clone() )
 		);
