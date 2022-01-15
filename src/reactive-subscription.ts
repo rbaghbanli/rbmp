@@ -19,7 +19,7 @@ export class Reactive_Subscription {
 	/**
 		Topic of reactive subscription
 	*/
-	topic(): string {
+	get topic(): string {
 		return this._topic;
 	}
 
