@@ -56,22 +56,37 @@ export class Binary_Message {
 		return data;
 	}
 
+	/**
+		Topic of the binary message
+	*/
 	get topic(): string {
 		return this._topic;
 	}
 
+	/**
+		Data of the binary message
+	*/
 	get data(): ArrayBuffer {
 		return this._data;
 	}
 
+	/**
+		Data length of the binary message
+	*/
 	get length(): number {
 		return this._write_offset;
 	}
 
+	/**
+		True if reading reached the end of the binary message, false otherwise
+	*/
 	get at_end(): boolean {
 		return this._read_offset === this._write_offset;
 	}
 
+	/**
+		True if both topic and data of the binary message are empty, false otherwise
+	*/
 	get is_blank(): boolean {
 		return this._topic.length === 0 && this._write_offset === 0;
 	}

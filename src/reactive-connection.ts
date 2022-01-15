@@ -71,7 +71,7 @@ export class Reactive_Connection {
 				};
 			}
 			catch ( exc ) {
-				console.debug( `Reactive connection: failed to open websocket on error ${ exc }` );
+				console.error( `Reactive connection: failed to open websocket on error ${ exc }` );
 				this._error$.next( `failure to open connection` );
 				this.close();
 			}
@@ -88,7 +88,7 @@ export class Reactive_Connection {
 			}
 		}
 		catch ( exc ) {
-			console.debug( `Reactive connection: failed to close websocket on error ${ exc }` );
+			console.error( `Reactive connection: failed to close websocket on error ${ exc }` );
 			this._error$.next( `failure to close connection` );
 		}
 		this._conn = undefined;

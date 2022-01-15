@@ -17,7 +17,14 @@ export class Reactive_Subscription {
 	}
 
 	/**
-		Starts reactive subscription
+		Topic of reactive subscription
+	*/
+	topic(): string {
+		return this._topic;
+	}
+
+	/**
+		Starts reactive subscription stream
 		@param count optional maximum count of messages to receive
 		@returns the subscription message stream
 	*/
@@ -32,7 +39,7 @@ export class Reactive_Subscription {
 	}
 
 	/**
-		Stops subscription
+		Stops reactive subscription stream
 		@param count optional maximum count of messages to receive
 		@returns the observable of the completion event
 	*/
