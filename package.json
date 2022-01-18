@@ -1,7 +1,7 @@
 {
 	"name": "rbmp",
-	"version": "1.3.4",
-	"description": "Reactive Ninary Messaging Protocol",
+	"version": "2.0.0",
+	"description": "Reactive Binary Messaging Protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
 	"hopmepage": "https://github.com/rbaghbanli/rbmp",
@@ -42,12 +42,12 @@
 	},
 	"dependencies": {},
 	"peerDependencies": {
-		"rxjs": "^7.4.0"
+		"rxjs": "^7.5.2"
 	},
 	"devDependencies": {
-		"@typescript-eslint/parser": "^5.9.0",
-		"@typescript-eslint/eslint-plugin": "^5.9.0",
-		"eslint": "^8.6.0",
+		"@typescript-eslint/parser": "^5.10.0",
+		"@typescript-eslint/eslint-plugin": "^5.10.0",
+		"eslint": "^8.7.0",
 		"rimraf": "^3.0.2",
 		"typescript": "^4.5.4"
 	}

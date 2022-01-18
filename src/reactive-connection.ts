@@ -1,6 +1,6 @@
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
-import { delay, filter, map, mergeMap, take } from 'rxjs/operators';
-import { Binary_Message } from './binary-message';
+import { delay, filter, finalize, map, mergeMap, take, tap } from 'rxjs/operators';
+import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Connection {
 
@@ -37,7 +37,8 @@ export class Reactive_Connection {
 	}
 
 	/**
-		Opens reactive connection
+		Opens reactive connection if closed
+		Any call to send/post/subscribe/unsubscribe will attempt to open connection if closed
 	*/
 	open(): void {
 		if ( !this._conn ) {
@@ -96,9 +97,9 @@ export class Reactive_Connection {
 	}
 
 	/**
-		Gets the observable of reactive connection messages
+		Gets the observable of incoming messages
 		@param predicate function to filter messages
-		@returns the stream of filtered binary messages
+		@returns the stream of filtered messages
 	*/
 	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._message$.pipe(
@@ -109,13 +110,12 @@ export class Reactive_Connection {
 
 	/**
 		Sends message thru reactive connection
-		@param msg binary message to send
+		@param msg the message to send
 		@returns the observable of the completion event
 	*/
 	send( msg: Binary_Message ): Observable<void> {
 		if ( this._conn && this._conn.readyState === this._conn_ready ) {
 			this._conn.send( msg.to_buffer() );
-			console.debug( `Reactive connection: sent message ${ msg.topic }` );
 			return of( undefined );
 		}
 		this._state$.pipe(
@@ -131,14 +131,45 @@ export class Reactive_Connection {
 	}
 
 	/**
-		Sends request message thru reactive conneciton
-		@param msg binary message to send as a request
-		@returns the observable of a response message
+		Sends request message to receive a single response message back
+		@param msg the request message
+		@returns the observable of the response message
 	*/
 	post( msg: Binary_Message ): Observable<Binary_Message> {
 		return this.send( msg ).pipe(
 			mergeMap( () => this.wait( m => m.topic === msg.topic ) ),
 			take( 1 )
+		);
+	}
+
+	/**
+		Subscribes to server message stream
+		@param topic the topic to subscribe to
+		@param count optional maximum number of messages for server to send
+			if parameter omitted there will be no limit on sent messages
+		@returns the subscription message stream
+	*/
+	subscribe( topic: string, count: number = __MSG_MAX_NAT32_VALUE ): Observable<Binary_Message> {
+		const msg = new Binary_Message( topic );
+		msg.write_length( count );
+		return this._conn.send( msg ).pipe(
+			tap( () => console.debug( `Reactive connection: subscribed to message ${ msg.topic }` ) ),
+			mergeMap( () => this.wait( m => m.topic === topic ) ),
+			take( count ),
+			finalize( () => this.unsubscribe( topic ).subscribe() )
+		);
+	}
+
+	/**
+		Unsubscribes from server message stream
+		@param topic the topic to unsubscribe from
+		@returns the observable of the completion event
+	*/
+	unsubscribe( topic: string ): Observable<void> {
+		const msg = new Binary_Message( topic );
+		msg.write_length( 0 );
+		return this._conn.send( msg ).pipe(
+			tap( () => console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` ) )
 		);
 	}
 

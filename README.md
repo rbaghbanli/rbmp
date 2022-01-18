@@ -2,7 +2,7 @@
 Reactive Binary Messaging Protocol
 
 Reactive implementation of binary messaging over websocket.
-Can be used for client-server and server-server communication.
+This library may be used for lean browser-to-server and server-to-server communication.
 
 
 ## Binary Message
@@ -11,19 +11,17 @@ Every binary message is identified by topic string to enable various messaging p
 
 
 ## Reacive Connection
-Reactive connection provides functionality to establish websocket connection in reactive way.
-Constructor takes factory method to instantiate websocket instance as the first parameter.
+Reactive connection provides functionality to establish reactive websocket connection.
+Constructor takes factory method to instantiate websocket instance as the first parameter to allow for browseror or nodejs websocket.
 Reactive connection is used to send binary message over websocket connection,
+ wait for all messages on specific topic,
  send binary message as a request and await on response,
- and wait for all messages on specific topic.
+ and subscribe to/unsubscribe from messages being published by the reactive publication.
 
 
 ## Reactive Publication
-Reactive publication provides functionality to publishing messages to reactive connections.
-
-
-## Reactive Subscription
-Reactive subscription provides functionality to manage message subscription stream.
+Reactive publication implements server functionality to subscribe/unsubscribe websocket connections,
+ and publish messages to subscribed websocket connections.
 
 
 ## Creating connection in browser app
@@ -69,32 +67,25 @@ Sample code to request some data from server:
 const req = new Binary_Message( 'Topic 101010' );
 req.write_num64( 101011 );
 req.write_string( '101012' );
-// observable of response message will be invoked no more than once
-let response: Observable<Binary_Message> =
-	conn.post( req );
+// send request and subscribe to response message
+conn.post( req ).subscribe( () => console.log( 'Response' ) );
+...
+// subscribe to all messages on topic 'Topic1'
+conn.wait( msg => msg.topic === 'Topic1' ).subscribe( () => console.log( 'Message' ) );
 ...
 ```
 
 
-## Implementing subscription streams
-Sample code to subscribe to and unsubscribe from server data stream:
+## Implementing server managed subscriptions
+Sample code to subscribe to and unsubscribe from server data streams:
 
 ```ts
 ...
-// create a subscription on topic 'MyTopic'
-const subs1 = new Reactive_Subscription( conn, 'MyTopic' );
-// stream first 500 messages on topic 'MyTopic'
-const stream_500: Observable<Binary_Message> =
-	subs1.start( 500 );
+// subscribe to messages on topic 'MyTopic' and unsubscribe after 1 second
+const sub =  conn.subscribe( 'MyTopic' ).subscribe( msg => console.log( `Message ${ msg.topic }` ) );
+timer( 1000 ).subscribe( () => sub.unsubscribe() );
 ...
-// create a subscription on topic 'MyTopic2'
-const subs2 = new Reactive_Subscription( conn, 'MyTopic2' );
-// stream all messages on topic 'MyTopic2'
-const stream_all: Observable<Binary_Message> =
-	subs2.start();
-...
-// unsubscribe from the streams
-subs1.stop();
-subs2.stop();
+// subscribe to first 500 messages on topic 'OtherTopic'
+conn.subscribe( 'OtherTopic', 500 ).subscribe( msg => console.log( `Message ${ msg.topic }` ) );
 ...
 ```

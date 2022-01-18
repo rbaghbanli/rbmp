@@ -1,5 +1,5 @@
-const __MSG_MAX_NAT32_VALUE = Math.pow( 2, 32 ) - 1;
-const __MSG_MS_PER_DAY = 24 * 60 * 60 * 1000;
+export const __MSG_MAX_NAT32_VALUE = Math.pow( 2, 32 ) - 1;
+export const __MSG_MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export class Binary_Message {
 

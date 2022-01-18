@@ -1,4 +1,4 @@
-import { Binary_Message } from './binary-message';
+import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Publication {
 
@@ -39,6 +39,7 @@ export class Reactive_Publication {
 					}
 				}
 			}
+			console.debug( `Reactive publication: pinged ${ sent.size } connections` );
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to ping connections on error ${ exc }` );
@@ -48,23 +49,23 @@ export class Reactive_Publication {
 
 	/**
 		Sends message to all subscribed connections
-		@param msg binary message to send
+		@param msg the message to send
 		@returns the number of messages sent to connections subscribed to message topic
 	*/
 	publish( msg: Binary_Message ): number {
-		let num = 0;
+		const sent = new Set<any>();
 		try {
 			const conns = this._subs.get( msg.topic );
 			if ( conns ) {
 				for ( const [ conn, count ] of conns ) {
 					if ( this.send( conn, msg ) ) {
-						if ( count > 1 ) {
-							conns.set( conn, count - 1 );
-						}
-						else {
+						if ( count < 1 ) {
 							conns.delete( conn );
 						}
-						++num;
+						else if ( count < __MSG_MAX_NAT32_VALUE ) {
+							conns.set( conn, count - 1 );
+						}
+						sent.add( conn );
 					}
 					else {
 						conns.delete( conn );
@@ -74,19 +75,20 @@ export class Reactive_Publication {
 					}
 				}
 			}
+			console.debug( `Reactive publication: published message ${ msg.topic } to ${ sent.size } connections` );
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to publish message ${ msg.topic } on error ${ exc }` );
 		}
-		return num;
+		return sent.size;
 	}
 
 	/**
-		Subscribes or unsubscribes connection
+		Subscribes or unsubscribes connection on topic defined in the message
 		@param conn connection to subscribe or unsubscribe
-		@param msg optional binary message to subscribe,
-			if omitted the connection is unsubscribed from all messages
-		@returns the maximum number of messages subsctiption requires as defined in the message
+		@param msg optional message to subscribe,
+			if parameter omitted the connection is unsubscribed from all messages
+		@returns the maximum number of messages subscription requested in the message
 	*/
 	subscribe( conn: any, msg?: Binary_Message ): number {
 		try {
@@ -100,12 +102,14 @@ export class Reactive_Publication {
 							this._subs.delete( msg.topic );
 						}
 					}
+					console.debug( `Reactive publication: unsubscribed connection from message ${ msg.topic }` );
 				}
 				else {	// subscribe connection to topic
 					if ( !conns ) {
 						this._subs.set( msg.topic, conns = new Map<any, number>() );
 					}
 					conns.set( conn, count );
+					console.debug( `Reactive publication: subscribed connection to message ${ msg.topic }` );
 				}
 				return count;
 			}
@@ -117,6 +121,7 @@ export class Reactive_Publication {
 					}
 				}
 			);
+			console.debug( `Reactive publication: unsubscribed connection from all messages` );
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to subscribe connection on error ${ exc }` );
@@ -127,8 +132,8 @@ export class Reactive_Publication {
 	/**
 		Sends message to connection
 		@param conn connection to send message to
-		@param msg binary message to send
-		@returns 1 is message is successfully sent, 0 otherwise
+		@param msg the message to send
+		@returns 1 if message is successfully sent, 0 otherwise
 	*/
 	send( conn: any, msg: Binary_Message ): number {
 		try {
