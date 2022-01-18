@@ -38,7 +38,7 @@ export class Reactive_Connection {
 
 	/**
 		Opens reactive connection if closed
-		Any call to send/post/subscribe/unsubscribe will attempt to open connection if closed
+		Any call to send/post/subscribe attempts to open connection
 	*/
 	open(): void {
 		if ( !this._conn ) {
@@ -98,12 +98,12 @@ export class Reactive_Connection {
 
 	/**
 		Gets the observable of incoming messages
-		@param predicate function to filter messages
+		@param callback function to filter messages
 		@returns the stream of filtered messages
 	*/
-	wait( predicate: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
+	wait( callback: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._message$.pipe(
-			filter( predicate ),
+			filter( callback ),
 			map( msg => msg.clone() )
 		);
 	}
@@ -143,33 +143,35 @@ export class Reactive_Connection {
 	}
 
 	/**
-		Subscribes to server message stream
-		@param topic the topic to subscribe to
-		@param count optional maximum number of messages for server to send
-			if parameter omitted there will be no limit on sent messages
+		Subscribes to or unsubscribes from the topic
+		@param topic the topic to subscribe to or unsubscribe from
+		@param count optional maximum number of messages for publisher to send
+			if omitted there will be no limit on messages,
+			if 0 then unsubscribes from the topic
 		@returns the subscription message stream
 	*/
 	subscribe( topic: string, count: number = __MSG_MAX_NAT32_VALUE ): Observable<Binary_Message> {
 		const msg = new Binary_Message( topic );
 		msg.write_length( count );
 		return this._conn.send( msg ).pipe(
-			tap( () => console.debug( `Reactive connection: subscribed to message ${ msg.topic }` ) ),
-			mergeMap( () => this.wait( m => m.topic === topic ) ),
+			mergeMap(
+				() => {
+					if ( count > 0 ) {
+						console.debug( `Reactive connection: subscribed to message ${ msg.topic }` );
+					}
+					else {
+						console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` )
+					}
+					return this.wait( m => m.topic === topic );
+				}
+			),
 			take( count ),
-			finalize( () => this.unsubscribe( topic ).subscribe() )
-		);
-	}
-
-	/**
-		Unsubscribes from server message stream
-		@param topic the topic to unsubscribe from
-		@returns the observable of the completion event
-	*/
-	unsubscribe( topic: string ): Observable<void> {
-		const msg = new Binary_Message( topic );
-		msg.write_length( 0 );
-		return this._conn.send( msg ).pipe(
-			tap( () => console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` ) )
+			finalize( () => {
+					if ( count > 0 ) {
+						this.subscribe( topic, 0 ).subscribe()
+					}
+				}
+			)
 		);
 	}
 

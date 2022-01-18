@@ -84,10 +84,10 @@ export class Reactive_Publication {
 	}
 
 	/**
-		Subscribes or unsubscribes connection on topic defined in the message
+		Subscribes connection to or unsubscribes connection from topic defined in the message
 		@param conn connection to subscribe or unsubscribe
-		@param msg optional message to subscribe,
-			if parameter omitted the connection is unsubscribed from all messages
+		@param msg optional message to define topic and message count,
+			if omitted the connection is unsubscribed from all messages
 		@returns the maximum number of messages subscription requested in the message
 	*/
 	subscribe( conn: any, msg?: Binary_Message ): number {

@@ -16,12 +16,12 @@ Constructor takes factory method to instantiate websocket instance as the first 
 Reactive connection is used to send binary message over websocket connection,
  wait for all messages on specific topic,
  send binary message as a request and await on response,
- and subscribe to/unsubscribe from messages being published by the reactive publication.
+ and subscribe/unsubscribe connection on topic.
 
 
 ## Reactive Publication
-Reactive publication implements server functionality to subscribe/unsubscribe websocket connections,
- and publish messages to subscribed websocket connections.
+Reactive publication implements reactive publisher functionality to subscribe/unsubscribe connections on topic,
+ and publish messages to subscribed connections.
 
 
 ## Creating connection in browser app
@@ -59,7 +59,7 @@ const conn = new Reactive_Connection(
 
 
 ## Implementing request/response calls
-Sample code to request some data from server:
+Sample code to request some data from publisher:
 
 ```ts
 ...
@@ -76,8 +76,8 @@ conn.wait( msg => msg.topic === 'Topic1' ).subscribe( () => console.log( 'Messag
 ```
 
 
-## Implementing server managed subscriptions
-Sample code to subscribe to and unsubscribe from server data streams:
+## Implementing publisher managed subscriptions
+Sample code to subscribe to publisher data streams:
 
 ```ts
 ...
