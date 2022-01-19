@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
-import { delay, filter, finalize, map, mergeMap, take, tap } from 'rxjs/operators';
+import { delay, filter, finalize, map, mergeMap, take } from 'rxjs/operators';
 import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Connection {
@@ -153,7 +153,7 @@ export class Reactive_Connection {
 	subscribe( topic: string, count: number = __MSG_MAX_NAT32_VALUE ): Observable<Binary_Message> {
 		const msg = new Binary_Message( topic );
 		msg.write_length( count );
-		return this._conn.send( msg ).pipe(
+		return this.send( msg ).pipe(
 			mergeMap(
 				() => {
 					if ( count > 0 ) {
@@ -166,7 +166,8 @@ export class Reactive_Connection {
 				}
 			),
 			take( count ),
-			finalize( () => {
+			finalize(
+				() => {
 					if ( count > 0 ) {
 						this.subscribe( topic, 0 ).subscribe()
 					}
