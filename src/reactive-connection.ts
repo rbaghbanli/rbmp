@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
-import { delay, filter, finalize, map, mergeMap, take } from 'rxjs/operators';
+import { delay, filter, finalize, map, mergeMap, take, tap } from 'rxjs/operators';
 import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Connection {
@@ -104,7 +104,7 @@ export class Reactive_Connection {
 	wait( callback: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
 		return this._message$.pipe(
 			filter( callback ),
-			map( msg => msg.clone() )
+			tap( msg => msg.reset_read() )
 		);
 	}
 
