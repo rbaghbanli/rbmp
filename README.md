@@ -7,21 +7,26 @@ This library may be used for lean browser-to-server and server-to-server communi
 
 ## Binary Message
 Binary message is a byte sequence designed for compact data representation and minimal transmission footprint.
-Every binary message is identified by topic string to enable various messaging patterns, such as request/response and publish/subscribe.
+Every binary message is identified by topic string to enable filtering and various messaging patterns,
+ such as request/response and publish/subscribe.
 
 
 ## Reacive Connection
 Reactive connection provides functionality to establish reactive websocket connection.
-Constructor takes factory method to instantiate websocket instance as the first parameter to allow for browseror or nodejs websocket.
-Reactive connection is used to send binary message over websocket connection,
- wait for all messages on specific topic,
- send binary message as a request and await on response,
- and subscribe/unsubscribe connection on topic.
+It can be instantiated in browser or nodejs.
+Reactive connection emits incoming binary messages,
+ sends message over websocket connection,
+ posts message as a request and to emit a response for that topic,
+ and subscribes/unsubscribes connection to publisher driven messages.
 
 
 ## Reactive Publication
-Reactive publication implements reactive publisher functionality to subscribe/unsubscribe connections on topic,
- and publish messages to subscribed connections.
+Reactive publication implements publisher functionality in browser or nodejs.
+It can be instantiated in browser or nodejs.
+Reactive publication sends binary message to websocket connection,
+ pings subscribed connections,
+ publishes message to all subscribed connections,
+ and subscribes/unsubscribes connection by the message topic.
 
 
 ## Creating connection in browser app
@@ -67,11 +72,11 @@ Sample code to request some data from publisher:
 const req = new Binary_Message( 'Topic 101010' );
 req.write_num64( 101011 );
 req.write_string( '101012' );
-// send request and subscribe to response message
+// post request and subscribe to response message
 conn.post( req ).subscribe( () => console.log( 'Response' ) );
 ...
 // subscribe to all messages on topic 'Topic1'
-conn.wait( msg => msg.topic === 'Topic1' ).subscribe( () => console.log( 'Message' ) );
+conn.emit( msg => msg.topic === 'Topic1' ).subscribe( () => console.log( 'Message' ) );
 ...
 ```
 

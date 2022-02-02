@@ -12,7 +12,28 @@ export class Reactive_Publication {
 	}
 
 	/**
-		Pings all connections for all subscriptions
+		Sends binary message to the connection
+		@param conn connection to send message to
+		@param msg the message to send
+		@returns 1 if message is successfully sent, 0 otherwise
+	*/
+	send( conn: any, msg: Binary_Message ): number {
+		try {
+			if ( conn && conn.readyState === this._conn_ready ) {
+				conn.send( msg.to_buffer() );
+				return 1;
+			}
+			console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
+		}
+		catch ( exc ) {
+			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );
+		}
+		setTimeout( () => conn.close( this._conn_error ), 0 );
+		return 0;
+	}
+
+	/**
+		Pings the connection or all connections
 		@returns the number of pinged connections
 	*/
 	ping( conn?: any ): number {
@@ -48,9 +69,9 @@ export class Reactive_Publication {
 	}
 
 	/**
-		Sends message to all subscribed connections
-		@param msg the message to send
-		@returns the number of messages sent to connections subscribed to message topic
+		Publishes the binary message to all connections subscribed to the message topic
+		@param msg the message to publish
+		@returns the number of messages sent to connections subscribed to the message topic
 	*/
 	publish( msg: Binary_Message ): number {
 		const sent = new Set<any>();
@@ -84,11 +105,12 @@ export class Reactive_Publication {
 	}
 
 	/**
-		Subscribes connection to or unsubscribes connection from topic defined in the message
+		Subscribes connection to or unsubscribes connection from the message topic
 		@param conn connection to subscribe or unsubscribe
-		@param msg optional message to define topic and message count,
-			if omitted the connection is unsubscribed from all messages
-		@returns the maximum number of messages subscription requested in the message
+		@param msg optional message to define topic and message count
+			if message count is 0 then connection is unsubscribed from the message topic
+			if message is omitted the connection is unsubscribed from all topics
+		@returns the maximum number of messages to be sent to subscriber
 	*/
 	subscribe( conn: any, msg?: Binary_Message ): number {
 		try {
@@ -126,27 +148,6 @@ export class Reactive_Publication {
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to subscribe connection on error ${ exc }` );
 		}
-		return 0;
-	}
-
-	/**
-		Sends message to connection
-		@param conn connection to send message to
-		@param msg the message to send
-		@returns 1 if message is successfully sent, 0 otherwise
-	*/
-	send( conn: any, msg: Binary_Message ): number {
-		try {
-			if ( conn && conn.readyState === this._conn_ready ) {
-				conn.send( msg.to_buffer() );
-				return 1;
-			}
-			console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
-		}
-		catch ( exc ) {
-			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );
-		}
-		setTimeout( () => conn.close( this._conn_error ), 0 );
 		return 0;
 	}
 

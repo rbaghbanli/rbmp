@@ -1,4 +1,5 @@
-export const __MSG_MAX_NAT32_VALUE = Math.pow( 2, 32 ) - 1;
+export const __MSG_MAX_NAT64_VALUE = BigInt.asUintN( 64, -1n );
+export const __MSG_MAX_NAT32_VALUE = -1 >>> 0;
 export const __MSG_MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export class Binary_Message {
@@ -9,6 +10,11 @@ export class Binary_Message {
 	protected _write_offset: number;
 	protected _read_offset: number;
 
+	/**
+		Constructs binary message
+		@param topic the string assigned to message topic, empty if omitted
+		@param data the ArrayBuffer assigned to message data, empty if omitted
+	*/
 	constructor( topic?: string, data?: ArrayBufferLike ) {
 		this._topic = topic ? ( topic.length > __MSG_MAX_NAT32_VALUE ? topic.slice( 0, __MSG_MAX_NAT32_VALUE ) : topic ) : '';
 		this._data = data ?? new ArrayBuffer( 0 );
@@ -17,6 +23,11 @@ export class Binary_Message {
 		this._write_offset = this._data.byteLength;
 	}
 
+	/**
+		Copies binary from source data view to destination data view
+		@param dst the DataView to copy to
+		@param data the DataView to copy from
+	*/
 	static copy_binary( dst: DataView, src: DataView ): void {
 		const length = Math.min( dst.byteLength, src.byteLength, __MSG_MAX_NAT32_VALUE );
 		for ( let lfi = length - 3, i = 0; i < length; ) {
@@ -31,6 +42,11 @@ export class Binary_Message {
 		}
 	}
 
+	/**
+		Creates new instance of binary message from the data buffer
+		@param buffer the ArrayBuffer to create binary message from
+		@returns the binary message
+	*/
 	static from_buffer( buffer: ArrayBufferLike ): Binary_Message {
 		const view = new DataView( buffer );
 		const topic_length = view.getUint32( 0 );
@@ -44,6 +60,10 @@ export class Binary_Message {
 		return new Binary_Message( topic, data );
 	}
 
+	/**
+		Creates new ArrayBuffer containing the binary message
+		@returns the ArrayBuffer
+	*/
 	to_buffer(): ArrayBuffer {
 		const data = new ArrayBuffer( 4 + ( this._topic.length << 1 ) + this._write_offset );
 		const view = new DataView( data );
@@ -91,10 +111,17 @@ export class Binary_Message {
 		return this._topic.length === 0 && this._write_offset === 0;
 	}
 
+	/**
+		Resets read position to the beginning of the binary message
+	*/
 	reset_read(): void {
 		this._read_offset = 0;
 	}
 
+	/**
+		Adds capacity to the data buffer of binary message
+		@param increment the value to increase buffer size by
+	*/
 	add_capacity( increment: number ): void {
 		const data = new ArrayBuffer( this._data.byteLength + ( increment > this._data.byteLength ? increment : this._data.byteLength ) );
 		const view = new DataView( data );
@@ -103,6 +130,9 @@ export class Binary_Message {
 		this._view = view;
 	}
 
+	/**
+		Trims capacity to the exact size of data buffer
+	*/
 	trim_capacity(): void {
 		const data = new ArrayBuffer( this._write_offset );
 		const view = new DataView( data );
@@ -163,6 +193,20 @@ export class Binary_Message {
 		this.write( 8, () => this._view.setBigInt64( this._write_offset, v ) );
 	}
 
+	read_int128(): bigint {
+		return this.read( 16,
+			() => ( ( this._view.getBigInt64( this._read_offset ) << 64n ) + this._view.getBigUint64( this._read_offset + 8 ) ) );
+	}
+
+	write_int128( v: bigint ): void {
+		this.write( 16,
+			() => {
+				this._view.setBigInt64( this._write_offset, v >> 64n );
+				this._view.setBigUint64( this._write_offset + 8, v & __MSG_MAX_NAT64_VALUE );
+			}
+		);
+	}
+
 	read_nat16(): number {
 		return this.read( 2, () => this._view.getUint16( this._read_offset ) );
 	}
@@ -185,6 +229,20 @@ export class Binary_Message {
 
 	write_nat64( v: bigint ): void {
 		this.write( 8, () => this._view.setBigUint64( this._write_offset, v ) );
+	}
+
+	read_nat128(): bigint {
+		return this.read( 16,
+			() => ( ( this._view.getBigUint64( this._read_offset ) << 64n ) + this._view.getBigUint64( this._read_offset + 8 ) ) );
+	}
+
+	write_nat128( v: bigint ): void {
+		this.write( 16,
+			() => {
+				this._view.setBigUint64( this._write_offset, v >> 64n );
+				this._view.setBigUint64( this._write_offset + 8, v & __MSG_MAX_NAT64_VALUE );
+			}
+		);
 	}
 
 	read_num32(): number {

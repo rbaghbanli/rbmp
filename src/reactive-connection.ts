@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
-import { delay, filter, finalize, map, mergeMap, take, tap } from 'rxjs/operators';
+import { delay, filter, finalize, map, mergeMap, take } from 'rxjs/operators';
 import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Connection {
@@ -22,17 +22,17 @@ export class Reactive_Connection {
 
 	/**
 	 	Gets the observable of reactive connection state changes
-		@returns the stream of reactive connection state changes
+		@returns the observable of reactive connection state changes
 	*/
-	stream_state(): Observable<boolean> {
+	emit_state(): Observable<boolean> {
 		return this._state$;
 	}
 
 	/**
 	 	Gets the observable of reactive connection errors
-		@returns the stream of reactive connection errors
+		@returns the observable of reactive connection errors
 	*/
-	stream_error(): Observable<string> {
+	emit_error(): Observable<string> {
 		return this._error$;
 	}
 
@@ -98,13 +98,13 @@ export class Reactive_Connection {
 
 	/**
 		Gets the observable of incoming messages
-		@param callback function to filter messages
-		@returns the stream of filtered messages
+		@param predicate function to filter incoming messages
+		@returns the observable of filtered messages
 	*/
-	wait( callback: ( msg: Binary_Message ) => boolean ): Observable<Binary_Message> {
+	emit( predicate: ( msg: Binary_Message, index: number ) => boolean ): Observable<Binary_Message> {
 		return this._message$.pipe(
-			filter( callback ),
-			tap( msg => msg.reset_read() )
+			filter( predicate ),
+			map( msg => new Binary_Message( msg.topic, msg.data ) )
 		);
 	}
 
@@ -137,7 +137,7 @@ export class Reactive_Connection {
 	*/
 	post( msg: Binary_Message ): Observable<Binary_Message> {
 		return this.send( msg ).pipe(
-			mergeMap( () => this.wait( m => m.topic === msg.topic ) ),
+			mergeMap( () => this.emit( m => m.topic === msg.topic ) ),
 			take( 1 )
 		);
 	}
@@ -146,9 +146,9 @@ export class Reactive_Connection {
 		Subscribes to or unsubscribes from the topic
 		@param topic the topic to subscribe to or unsubscribe from
 		@param count optional maximum number of messages for publisher to send
-			if omitted there will be no limit on messages,
-			if 0 then unsubscribes from the topic
-		@returns the subscription message stream
+			if count is omitted then there is no limit on number of messages
+			if count is 0 then unsubscribes from the topic
+		@returns the observable of the subscription messages
 	*/
 	subscribe( topic: string, count: number = __MSG_MAX_NAT32_VALUE ): Observable<Binary_Message> {
 		const msg = new Binary_Message( topic );
@@ -160,16 +160,16 @@ export class Reactive_Connection {
 						console.debug( `Reactive connection: subscribed to message ${ msg.topic }` );
 					}
 					else {
-						console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` )
+						console.debug( `Reactive connection: unsubscribed from message ${ msg.topic }` );
 					}
-					return this.wait( m => m.topic === topic );
+					return this.emit( m => m.topic === topic );
 				}
 			),
 			take( count ),
 			finalize(
 				() => {
 					if ( count > 0 ) {
-						this.subscribe( topic, 0 ).subscribe()
+						this.subscribe( topic, 0 ).subscribe();
 					}
 				}
 			)
