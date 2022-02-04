@@ -38,7 +38,6 @@ const prot = location.protocol.includes( 'https' ) ? 'wss' : 'ws';
 const host = window.location.hostname;
 const conn = new Reactive_Connection(
 	() => new WebSocket( `${ prot }://${ host }` ),
-	WebSocket.OPEN,
 	5 /* attempts to connect */,
 	1000 /* ms between connection attempts */
 );
@@ -55,7 +54,6 @@ import * as WebSocket from 'ws';
 const addr = `wss://127.0.0.1`;
 const conn = new Reactive_Connection(
 	() => new WebSocket( addr, { rejectUnauthorized: false } ),
-	WebSocket.OPEN,
 	5 /* attempts to connect */,
 	1000 /* ms between connection attempts */
 );

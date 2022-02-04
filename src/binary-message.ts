@@ -26,7 +26,7 @@ export class Binary_Message {
 	/**
 		Copies binary from source data view to destination data view
 		@param dst the DataView to copy to
-		@param data the DataView to copy from
+		@param src the DataView to copy from
 	*/
 	static copy_binary( dst: DataView, src: DataView ): void {
 		const length = Math.min( dst.byteLength, src.byteLength, __MSG_MAX_NAT32_VALUE );

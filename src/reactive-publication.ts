@@ -2,58 +2,59 @@ import { Binary_Message, __MSG_MAX_NAT32_VALUE } from './binary-message';
 
 export class Reactive_Publication {
 
-	protected readonly _conn_ready: number;
-	protected readonly _conn_error: number;
-	protected _subs = new Map<string, Map<any, number>>();
+	protected readonly _ws_ready: number;
+	protected readonly _ws_error: number;
+	protected _subscriptions = new Map<string, Map<any, number>>();
 
-	constructor( conn_ready: number = 1, conn_error = 1011 ) {
-		this._conn_ready = conn_ready;
-		this._conn_error = conn_error;
+	constructor( ws_ready: number = 1, ws_error: number = 1011 ) {
+		this._ws_ready = ws_ready;
+		this._ws_error = ws_error;
 	}
 
 	/**
 		Sends binary message to the connection
-		@param conn connection to send message to
+		@param ws WebSocket to send message to
 		@param msg the message to send
 		@returns 1 if message is successfully sent, 0 otherwise
 	*/
-	send( conn: any, msg: Binary_Message ): number {
+	send( ws: any, msg: Binary_Message ): number {
 		try {
-			if ( conn && conn.readyState === this._conn_ready ) {
-				conn.send( msg.to_buffer() );
+			if ( ws && ws.readyState === this._ws_ready ) {
+				ws.send( msg.to_buffer() );
 				return 1;
 			}
-			console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ conn.readyState }` );
+			console.error( `Reactive publication: failed to send message ${ msg.topic } on websocket state ${ ws.readyState }` );
 		}
 		catch ( exc ) {
 			console.error( `Reactive publication: failed to send message ${ msg.topic } on error ${ exc }` );
 		}
-		setTimeout( () => conn.close( this._conn_error ), 0 );
+		setTimeout( () => ws.close( this._ws_error ), 0 );
 		return 0;
 	}
 
 	/**
 		Pings the connection or all connections
+		@param ws optional WebSocket to ping
 		@returns the number of pinged connections
 	*/
-	ping( conn?: any ): number {
+	ping( ws?: any ): number {
 		const sent = new Set<any>();
 		try {
 			const msg = new Binary_Message();
-			if ( conn && this.send( conn, msg ) ) {
-				sent.add( conn );
+			if ( ws && this.send( ws, msg ) ) {
+				sent.add( ws );
 			}
 			else {
-				for ( const [ topic, conns ] of this._subs ) {
-					for ( const [ conn, count ] of conns ) {
-						if ( !sent.has( conn ) ) {
-							if ( this.send( conn, msg ) ) {
-								sent.add( conn );
+				for ( const [ topic, connections ] of this._subscriptions ) {
+					for ( const [ websocket, count ] of connections ) {
+						if ( !sent.has( websocket ) ) {
+							if ( this.send( websocket, msg ) ) {
+								sent.add( websocket );
 							}
 							else {
-								conns.delete( conn );
-								if ( conns.size === 0 ) {
-									this._subs.delete( topic );
+								connections.delete( websocket );
+								if ( connections.size === 0 ) {
+									this._subscriptions.delete( topic );
 								}
 							}
 						}
@@ -70,29 +71,29 @@ export class Reactive_Publication {
 
 	/**
 		Publishes the binary message to all connections subscribed to the message topic
-		@param msg the message to publish
+		@param msg message to publish
 		@returns the number of messages sent to connections subscribed to the message topic
 	*/
 	publish( msg: Binary_Message ): number {
 		const sent = new Set<any>();
 		try {
-			const conns = this._subs.get( msg.topic );
-			if ( conns ) {
-				for ( const [ conn, count ] of conns ) {
-					if ( this.send( conn, msg ) ) {
+			const connections = this._subscriptions.get( msg.topic );
+			if ( connections ) {
+				for ( const [ websocket, count ] of connections ) {
+					if ( this.send( websocket, msg ) ) {
 						if ( count < 1 ) {
-							conns.delete( conn );
+							connections.delete( websocket );
 						}
 						else if ( count < __MSG_MAX_NAT32_VALUE ) {
-							conns.set( conn, count - 1 );
+							connections.set( websocket, count - 1 );
 						}
-						sent.add( conn );
+						sent.add( websocket );
 					}
 					else {
-						conns.delete( conn );
+						connections.delete( websocket );
 					}
-					if ( conns.size === 0 ) {
-						this._subs.delete( msg.topic );
+					if ( connections.size === 0 ) {
+						this._subscriptions.delete( msg.topic );
 					}
 				}
 			}
@@ -106,40 +107,40 @@ export class Reactive_Publication {
 
 	/**
 		Subscribes connection to or unsubscribes connection from the message topic
-		@param conn connection to subscribe or unsubscribe
+		@param ws WebSocket to subscribe or unsubscribe
 		@param msg optional message to define topic and message count
 			if message count is 0 then connection is unsubscribed from the message topic
 			if message is omitted the connection is unsubscribed from all topics
 		@returns the maximum number of messages to be sent to subscriber
 	*/
-	subscribe( conn: any, msg?: Binary_Message ): number {
+	subscribe( ws: any, msg?: Binary_Message ): number {
 		try {
 			if ( msg ) {
 				const count = msg.read_length();
-				let conns = this._subs.get( msg.topic );
+				let connections = this._subscriptions.get( msg.topic );
 				if ( count === 0 ) {	// unsubscribe connection from topic
-					if ( conns ) {
-						conns.delete( conn );
-						if ( conns.size === 0 ) {
-							this._subs.delete( msg.topic );
+					if ( connections ) {
+						connections.delete( ws );
+						if ( connections.size === 0 ) {
+							this._subscriptions.delete( msg.topic );
 						}
 					}
 					console.debug( `Reactive publication: unsubscribed connection from message ${ msg.topic }` );
 				}
 				else {	// subscribe connection to topic
-					if ( !conns ) {
-						this._subs.set( msg.topic, conns = new Map<any, number>() );
+					if ( !connections ) {
+						this._subscriptions.set( msg.topic, connections = new Map<any, number>() );
 					}
-					conns.set( conn, count );
+					connections.set( ws, count );
 					console.debug( `Reactive publication: subscribed connection to message ${ msg.topic }` );
 				}
 				return count;
 			}
-			this._subs.forEach( // unsubscribe connection from all topics
+			this._subscriptions.forEach( // unsubscribe connection from all topics
 				( conns, topic ) => {
-					conns.delete( conn );
+					conns.delete( ws );
 					if ( conns.size === 0 ) {
-						this._subs.delete( topic );
+						this._subscriptions.delete( topic );
 					}
 				}
 			);
