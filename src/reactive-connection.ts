@@ -9,6 +9,8 @@ export class Reactive_Connection {
 	protected _error$ = new Subject<string>();
 
 	constructor( ws_factory: () => any, min_reconnect_delay: number = 100, max_reconnect_delay: number = 60000 ) {
+		const min_delay = min_reconnect_delay > 10 ? min_reconnect_delay : 10;
+		const max_delay = max_reconnect_delay > 1000 ? max_reconnect_delay : 1000;
 		let interval = 0;
 		this._websocket$.pipe(
 			filter( ws => ws == null ),
@@ -48,7 +50,7 @@ export class Reactive_Connection {
 					this._error$.next( `failure to open connection` );
 					this.close();
 				}
-				interval = Math.max( min_reconnect_delay, Math.min( max_reconnect_delay, interval << 1 ) );
+				interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
 			}
 		);
 	}
