@@ -6,7 +6,7 @@ This library may be used for lean browser-to-server and server-to-server communi
 
 
 ## Binary Message
-Binary message is a byte sequence designed for compact data representation and minimal transmission footprint.
+Binary message is a big-endian byte sequence designed for compact data representation and minimal transmission footprint.
 Every binary message is identified by topic string to enable filtering and various messaging patterns,
  such as request/response and publish/subscribe.
 
@@ -36,11 +36,7 @@ Sample code to create connection in browser app:
 ...
 const prot = location.protocol.includes( 'https' ) ? 'wss' : 'ws';
 const host = window.location.hostname;
-const conn = new Reactive_Connection(
-	() => new WebSocket( `${ prot }://${ host }` ),
-	5 /* attempts to connect */,
-	1000 /* ms between connection attempts */
-);
+const conn = new Reactive_Connection( () => new WebSocket( `${ prot }://${ host }` ) );
 ...
 ```
 
@@ -52,11 +48,7 @@ Sample code to create connection in nodejs app:
 import * as WebSocket from 'ws';
 ...
 const addr = `wss://127.0.0.1`;
-const conn = new Reactive_Connection(
-	() => new WebSocket( addr, { rejectUnauthorized: false } ),
-	5 /* attempts to connect */,
-	1000 /* ms between connection attempts */
-);
+const conn = new Reactive_Connection( () => new WebSocket( addr, { rejectUnauthorized: false } ) );
 ...
 ```
 

@@ -8,53 +8,47 @@ export class Reactive_Connection {
 	protected _message$ = new Subject<Binary_Message>();
 	protected _error$ = new Subject<string>();
 
-	constructor( ws_factory: () => any, connection_attempts = 10, reconnection_interval = 100 ) {
-		const attempts = Math.max( connection_attempts, 1 );
-		let interval = Math.max( reconnection_interval, 10 );
+	constructor( ws_factory: () => any, min_reconnect_delay: number = 100, max_reconnect_delay: number = 60000 ) {
+		let interval = 0;
 		this._websocket$.pipe(
 			filter( ws => ws == null ),
-			map(
-				() => {
-					try {
-						const ws = ws_factory();
-						ws.binaryType = 'arraybuffer';
-						const url = ws.url;
-						console.debug( `Reactive connection: websocket [${ url }] connecting...` );
-						ws.onopen = () => {
-							console.debug( `Reactive connection: websocket [${ url }] connected` );
-							this._websocket$.next( ws );
-						};
-						ws.onclose = ( event: any ) => {
-							console.debug( `Reactive connection: websocket [${ url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
-							this._websocket$.next( undefined );
-						};
-						ws.onmessage = ( event: any ) => {
-							const msg = Binary_Message.from_buffer( event.data as ArrayBuffer );
-							if ( msg.is_blank ) {
-								console.debug( `Reactive connection: ping received` );
-							}
-							else {
-								console.debug( `Reactive connection: received message ${ msg.topic }` );
-								this._message$.next( msg );
-							}
-						};
-						ws.onerror = () => {
-							console.debug( `Reactive connection: websocket [${ url }] error` );
-							this._error$.next( `websocket [${ url }] error` );
-						};
-					}
-					catch ( exc ) {
-						console.error( `Reactive connection: failed to open websocket on error ${ exc }` );
-						this._error$.next( `failure to open connection` );
-						this.close();
-					}
-				}
-			),
 			delay( interval ),
-			take( attempts )
 		).subscribe(
 			() => {
-				interval <<= 1;
+				try {
+					const ws = ws_factory();
+					ws.binaryType = 'arraybuffer';
+					const url = ws.url;
+					console.debug( `Reactive connection: websocket [${ url }] connecting...` );
+					ws.onopen = () => {
+						console.debug( `Reactive connection: websocket [${ url }] connected` );
+						this._websocket$.next( ws );
+					};
+					ws.onclose = ( event: any ) => {
+						console.debug( `Reactive connection: websocket [${ url }] disconnected with code ${ event.code } / reason ${ event.reason }` );
+						this._websocket$.next( undefined );
+					};
+					ws.onmessage = ( event: any ) => {
+						const msg = Binary_Message.from_buffer( event.data as ArrayBuffer );
+						if ( msg.is_blank ) {
+							console.debug( `Reactive connection: ping received` );
+						}
+						else {
+							console.debug( `Reactive connection: received message ${ msg.topic }` );
+							this._message$.next( msg );
+						}
+					};
+					ws.onerror = () => {
+						console.debug( `Reactive connection: websocket [${ url }] error` );
+						this._error$.next( `websocket [${ url }] error` );
+					};
+				}
+				catch ( exc ) {
+					console.error( `Reactive connection: failed to open websocket on error ${ exc }` );
+					this._error$.next( `failure to open connection` );
+					this.close();
+				}
+				interval = Math.max( min_reconnect_delay, Math.min( max_reconnect_delay, interval << 1 ) );
 			}
 		);
 	}
@@ -87,17 +81,15 @@ export class Reactive_Connection {
 		this._websocket$.pipe(
 			take( 1 )
 		).subscribe(
-			{
-				next: ws => {
-					try {
-						if ( ws != null ) {
-							ws.close();
-						}
+			ws => {
+				try {
+					if ( ws != null ) {
+						ws.close();
 					}
-					catch ( exc ) {
-						console.error( `Reactive connection: failed to close websocket on error ${ exc }` );
-						this._error$.next( `failure to close connection` );
-					}
+				}
+				catch ( exc ) {
+					console.error( `Reactive connection: failed to close websocket on error ${ exc }` );
+					this._error$.next( `failure to close connection` );
 				}
 			}
 		);
