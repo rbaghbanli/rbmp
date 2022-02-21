@@ -36,7 +36,7 @@ Sample code to create connection in browser app:
 ...
 const prot = location.protocol.includes( 'https' ) ? 'wss' : 'ws';
 const host = window.location.hostname;
-const conn = new Reactive_Connection( () => new WebSocket( `${ prot }://${ host }` ) );
+const conn = new Reactive_Client( () => new WebSocket( `${ prot }://${ host }` ) );
 ...
 ```
 
@@ -48,7 +48,7 @@ Sample code to create connection in nodejs app:
 import * as WebSocket from 'ws';
 ...
 const addr = `wss://127.0.0.1`;
-const conn = new Reactive_Connection( () => new WebSocket( addr, { rejectUnauthorized: false } ) );
+const conn = new Reactive_Client( () => new WebSocket( addr, { rejectUnauthorized: false } ) );
 ...
 ```
 
@@ -58,15 +58,15 @@ Sample code to request some data from publisher:
 
 ```ts
 ...
-// create binary message for request on topic 101010
-const req = new Binary_Message( 'Topic 101010' );
+// create message for request on topic 101010
+const req = new Message_Data();
 req.write_num64( 101011 );
 req.write_string( '101012' );
 // post request and subscribe to response message
-conn.post( req ).subscribe( () => console.log( 'Response' ) );
+conn.request( 'Topic 101010', req ).subscribe( () => console.log( 'Response' ) );
 ...
 // subscribe to all messages on topic 'Topic1'
-conn.emit( msg => msg.topic === 'Topic1' ).subscribe( () => console.log( 'Message' ) );
+conn.emit().pipe( filter( msg => msg.read_string() === 'Topic1' ) ).subscribe( () => console.log( 'Message' ) );
 ...
 ```
 

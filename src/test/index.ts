@@ -1,4 +1,4 @@
-import { Binary_Message_Test } from './binary-message-test';
+import { Message_Data_Test } from './message-data-test';
 
-const test = new Binary_Message_Test();
-test.test_read_write_message();
+const test = new Message_Data_Test();
+test.test_read_write();
