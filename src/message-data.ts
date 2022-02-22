@@ -422,11 +422,20 @@ export class Message_Data {
 
 	/**
 		Creates new instance of message data from the buffer
-		@param buffer the ArrayBufferLike to create data from
-		@returns the data
+		@param buffer ArrayBufferLike to create data from
 	*/
-	static from_buffer( buffer: ArrayBufferLike ): Message_Data {
+	static of_buffer( buffer: ArrayBufferLike ): Message_Data {
 		return new Message_Data( new DataView( buffer ) );
+	}
+
+	/**
+		Creates new instance of message data and writes the string
+		@param value string to write
+	*/
+	static on_string( value: string ): Message_Data {
+		const msg = new Message_Data();
+		msg.write_string( value );
+		return msg;
 	}
 
 	/**

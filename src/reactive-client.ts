@@ -98,7 +98,7 @@ export class Reactive_Client {
 	*/
 	emit(): Observable<Message_Data> {
 		return this._message$.pipe(
-			map( m => Message_Data.from_buffer( m ) )
+			map( m => Message_Data.of_buffer( m ) )
 		);
 	}
 
@@ -116,36 +116,15 @@ export class Reactive_Client {
 	}
 
 	/**
-		Sends identified message thru WebSocket
-		@param topic string message identifier
-		@param message optional data to include in the request
-		@returns the observable of the completion event
-	*/
-	post( topic: string, message?: Message_Data ): Observable<void> {
-		const msg = new Message_Data();
-		msg.write_string( topic );
-		if ( message ) {
-			msg.write_dat( message.get_data() );
-		}
-		return this.send( msg );
-	}
-
-	/**
-		Sends identified message thru WebSocket and awaits on single response message
-		@param topic string message identifier for request and response
-		@param message optional data to include in the request
+		Sends message thru WebSocket and awaits on single response message
+		@param topic string message identifier to filter response message
+		@param message data to include in the request
 		@returns the observable of the response message
 	*/
-	request( topic: string, message?: Message_Data ): Observable<Message_Data> {
-		const msg = new Message_Data();
-		msg.write_string( topic );
-		if ( message ) {
-			msg.write_dat( message.get_data() );
-		}
-		return this.send( msg ).pipe(
+	post( topic: string, message: Message_Data ): Observable<Message_Data> {
+		return this.send( message ).pipe(
 			mergeMap( () => this.emit() ),
 			filter( d => d.read_string() === topic ),
-			map( d => new Message_Data( d.get_unread_data() ) ),
 			take( 1 )
 		);
 	}
@@ -160,13 +139,11 @@ export class Reactive_Client {
 	*/
 	subscribe( topic: string, count?: number ): Observable<Message_Data> {
 		const cnt = count ?? MESSAGE_DATA_MAX_UINT32;
-		const msg = new Message_Data();
-		msg.write_string( topic );
+		const msg = Message_Data.on_string( topic );
 		msg.write_uint32( cnt );
 		return this.send( msg ).pipe(
 			mergeMap( () => this.emit() ),
 			filter( d => d.read_string() === topic ),
-			map( d => new Message_Data( d.get_unread_data() ) ),
 			take( cnt ),
 			finalize(
 				() => {

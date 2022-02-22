@@ -34,45 +34,18 @@ export class Reactive_Server {
 	}
 
 	/**
-		Sends identified message to the WebSocket
-		@param ws WebSocket to send message to
-		@param topic string message identifier
-		@param message optional data to send
-		@returns 1 if message is successfully sent, 0 otherwise
-	*/
-	post( ws: any, topic: string, message?: Message_Data ): number {
-		try {
-			const msg = new Message_Data();
-			msg.write_string( topic );
-			if ( message ) {
-				msg.write_dat( message.get_data() );
-			}
-			return this.send( ws, msg );
-		}
-		catch ( exc ) {
-			console.error( `Reactive server: message ${ topic } post error ${ exc }` );
-		}
-		return 0;
-	}
-
-	/**
 		Sends publication message to all WebSockets subscribed to the topic
-		@param topic string to publish
-		@param message optional data to send
+		@param topic string to identify subscribers
+		@param message data to publish
 		@returns number of messages sent
 	*/
-	publish( topic: string, message?: Message_Data ): number {
+	publish( topic: string, message: Message_Data ): number {
 		let num = 0;
 		try {
 			const connections = this._subscriptions.get( topic );
 			if ( connections ) {
-				const msg = new Message_Data();
-				msg.write_string( topic );
-				if ( message ) {
-					msg.write_dat( message.get_data() );
-				}
 				for ( const [ websocket, count ] of connections ) {
-					if ( this.send( websocket, msg ) ) {
+					if ( this.send( websocket, message ) ) {
 						++num;
 						if ( count < 1 ) {
 							connections.delete( websocket );
@@ -100,8 +73,8 @@ export class Reactive_Server {
 	/**
 		Subscribes WebSocket to or unsubscribes WebSocket from the message topic
 		@param ws WebSocket to subscribe or unsubscribe
-		@param topic string to subscribe to or unsubscribe from
-		@param message data to containing maximum number of messages to be sent to subscriber
+		@param topic string to identify subscribers
+		@param message data containing maximum number of messages to be sent to subscriber
 		@returns the maximum number of messages to be sent to subscriber
 	*/
 	subscribe( ws: any, topic: string, message: Message_Data ): number {

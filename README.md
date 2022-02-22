@@ -59,11 +59,11 @@ Sample code to request some data from publisher:
 ```ts
 ...
 // create message for request on topic 101010
-const req = new Message_Data();
+const req = Message_Data.on_string( 'Topic 101010' );
 req.write_num64( 101011 );
 req.write_string( '101012' );
 // post request and subscribe to response message
-conn.request( 'Topic 101010', req ).subscribe( () => console.log( 'Response' ) );
+conn.post( 'Topic 101010', req ).subscribe( () => console.log( 'Response' ) );
 ...
 // subscribe to all messages on topic 'Topic1'
 conn.emit().pipe( filter( msg => msg.read_string() === 'Topic1' ) ).subscribe( () => console.log( 'Message' ) );
