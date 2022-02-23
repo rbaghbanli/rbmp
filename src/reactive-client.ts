@@ -5,7 +5,7 @@ import { Message_Data, MESSAGE_DATA_MAX_UINT32 } from './message-data';
 export class Reactive_Client {
 
 	protected _websocket$ = new BehaviorSubject<any>( undefined );
-	protected _message$ = new Subject<ArrayBuffer>();
+	protected _message$ = new Subject<Message_Data>();
 	protected _error$ = new Subject<string>();
 
 	constructor( ws_factory: () => any, min_reconnect_delay: number = 100, max_reconnect_delay: number = 60000 ) {
@@ -36,9 +36,9 @@ export class Reactive_Client {
 						this._error$.next( `websocket [${ url }] error ${ event }` );
 					};
 					ws.onmessage = ( event: any ) => {
-						const message = event.data as ArrayBuffer;
-						console.debug( `Reactive client: received message ${ message.byteLength }` );
-						this._message$.next( message );
+						const buffer = event.data as ArrayBuffer;
+						console.debug( `Reactive client: received message ${ buffer.byteLength }` );
+						this._message$.next( new Message_Data( buffer ) );
 					};
 				}
 				catch ( exc ) {
@@ -61,7 +61,7 @@ export class Reactive_Client {
 	/**
 		The observable of messages
 	*/
-	get message(): Observable<ArrayBuffer> {
+	get message(): Observable<Message_Data> {
 		return this._message$;
 	}
 
@@ -95,17 +95,18 @@ export class Reactive_Client {
 
 	/**
 		Returns the observable of incoming messages
+		@returns observable of messages
 	*/
 	emit(): Observable<Message_Data> {
 		return this._message$.pipe(
-			map( m => Message_Data.of_buffer( m ) )
+			map( m => new Message_Data( m ) )
 		);
 	}
 
 	/**
 		Sends the message thru WebSocket
 		@param message data to send
-		@returns the observable of the completion event
+		@returns observable of the completion event
 	*/
 	send( message: Message_Data ): Observable<void> {
 		return this._websocket$.pipe(
@@ -117,14 +118,13 @@ export class Reactive_Client {
 
 	/**
 		Sends message thru WebSocket and awaits on single response message
-		@param topic string message identifier to filter response message
 		@param message data to include in the request
-		@returns the observable of the response message
+		@returns observable of the response message
 	*/
-	post( topic: string, message: Message_Data ): Observable<Message_Data> {
+	post( message: Message_Data ): Observable<Message_Data> {
 		return this.send( message ).pipe(
 			mergeMap( () => this.emit() ),
-			filter( d => d.read_string() === topic ),
+			filter( m => m.topic === message.topic ),
 			take( 1 )
 		);
 	}
@@ -135,11 +135,11 @@ export class Reactive_Client {
 		@param count optional maximum number of messages for publisher to send;
 			if count is omitted then there is no limit on number of messages;
 			if count is 0 then unsubscribes from the topic.
-		@returns the observable of the published messages
+		@returns observable of the published messages
 	*/
 	subscribe( topic: string, count?: number ): Observable<Message_Data> {
 		const cnt = count ?? MESSAGE_DATA_MAX_UINT32;
-		const msg = Message_Data.on_string( topic );
+		const msg = new Message_Data( topic );
 		msg.write_uint32( cnt );
 		return this.send( msg ).pipe(
 			mergeMap( () => this.emit() ),

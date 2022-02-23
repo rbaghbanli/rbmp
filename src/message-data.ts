@@ -8,21 +8,45 @@ export class Message_Data {
 	protected _data: DataView;
 	protected _write_offset: number;
 	protected _read_offset: number;
+	protected _topic: string;
 
 	/**
 		Constructs message data
-		@param data DataView to assign, new ArrayBuffer is allocated and referenced if omitted
+		@param data string, Message_Data, DataView, or ArrayBufferLike to initiate message data
 	*/
-	constructor( data?: DataView ) {
-		if ( data ) {
+	constructor( data: string | Message_Data | DataView | ArrayBufferLike ) {
+		if ( typeof data === 'string' ) {
+			this._data = new DataView( new ArrayBuffer( MESSAGE_DATA_START_LENGTH + data.length ) );
+			this._write_offset = 0;
+			this.write_string( data );
+			this._read_offset = this._write_offset;
+			this._topic = data;
+		}
+		else if ( data instanceof Message_Data ) {
+			this._data = data._data;
+			this._write_offset = data._write_offset;
+			this._read_offset = data._read_offset;
+			this._topic = data._topic;
+		}
+		else if ( data instanceof DataView ) {
 			this._data = data;
-			this._write_offset = data.byteLength;
+			this._write_offset = this._data.byteLength;
+			this._read_offset = 0;
+			this._topic = this.read_string();
 		}
 		else {
-			this._data = new DataView( new ArrayBuffer( MESSAGE_DATA_START_LENGTH ) );
-			this._write_offset = 0;
+			this._data = new DataView( data );
+			this._write_offset = this._data.byteLength;
+			this._read_offset = 0;
+			this._topic = this.read_string();
 		}
-		this._read_offset = 0;
+	}
+
+	/**
+		Message topic
+	*/
+	get topic(): string {
+		return this._topic;
 	}
 
 	/**
@@ -56,6 +80,7 @@ export class Message_Data {
 	/**
 		Returns new copy of the buffer with specified offset
 		@param offset number of bytes
+		@returns ArrayBuffer
 	*/
 	get_buffer( offset: number = 0 ): ArrayBuffer {
 		return this._data.buffer.slice( this._data.byteOffset + offset, this._data.byteOffset + this._write_offset - offset );
@@ -64,6 +89,7 @@ export class Message_Data {
 	/**
 		Returns the new data with specified offset
 		@param offset number of bytes
+		@returns DataView
 	*/
 	get_data( offset: number = 0 ): DataView {
 		return new DataView( this._data.buffer, this._data.byteOffset + offset, this._write_offset - offset );
@@ -71,6 +97,7 @@ export class Message_Data {
 
 	/**
 		Returns the unread data
+		@returns DataView
 	*/
 	get_unread_data(): DataView {
 		return this.get_data( this._read_offset );
@@ -104,7 +131,7 @@ export class Message_Data {
 
 	protected read<T>( increment: number, f: ( d: Message_Data ) => T ): T {
 		const offset = this._read_offset + increment;
-		if ( offset > this._data.byteLength ) {
+		if ( offset > this._write_offset ) {
 			throw new RangeError( `buffer data size ${this._data.byteLength} exceeded by ${offset - this._data.byteLength}\n${ this.toString() }` );
 		}
 		const v = f( this );
@@ -227,7 +254,7 @@ export class Message_Data {
 	/**
 		Reads DataView of specified byte length
 		@param length number of bytes to read
-		@returns the DataView
+		@returns DataView
 	*/
 	read_dat( length: number ): DataView {
 		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
@@ -238,6 +265,7 @@ export class Message_Data {
 
 	/**
 		Writes DataView without byte length prefix
+		@param value DataView to write
 	*/
 	write_dat( value: DataView ): void {
 		this.write( value.byteLength, value,
@@ -248,7 +276,7 @@ export class Message_Data {
 	/**
 		Reads ArrayBuffer of specified byte length
 		@param length number of bytes to read
-		@returns the ArrayBuffer
+		@returns ArrayBuffer
 	*/
 	read_buf( length: number ): ArrayBuffer {
 		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
@@ -259,6 +287,7 @@ export class Message_Data {
 
 	/**
 		Writes ArrayBufferLike without byte length prefix
+		@param value ArrayBufferLike to write
 	*/
 	write_buf( value: ArrayBufferLike ): void {
 		this.write( value.byteLength, value,
@@ -269,7 +298,7 @@ export class Message_Data {
 	/**
 		Reads string of specified byte length
 		@param length number of bytes to read
-		@returns the string
+		@returns string
 	*/
 	read_str( length: number ): string {
 		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
@@ -278,6 +307,7 @@ export class Message_Data {
 
 	/**
 		Writes string without byte length prefix
+		@param value string to write
 	*/
 	write_str( value: string ): void {
 		const len = Math.min( value.length || 0, MESSAGE_DATA_MAX_UINT32 );
@@ -421,24 +451,6 @@ export class Message_Data {
 	}
 
 	/**
-		Creates new instance of message data from the buffer
-		@param buffer ArrayBufferLike to create data from
-	*/
-	static of_buffer( buffer: ArrayBufferLike ): Message_Data {
-		return new Message_Data( new DataView( buffer ) );
-	}
-
-	/**
-		Creates new instance of message data and writes the string
-		@param value string to write
-	*/
-	static on_string( value: string ): Message_Data {
-		const msg = new Message_Data();
-		msg.write_string( value );
-		return msg;
-	}
-
-	/**
 		Copies data from source data view to destination data view
 		@param dst the DataView to copy to
 		@param src the DataView to copy from
@@ -459,29 +471,30 @@ export class Message_Data {
 
 	/**
 		Equates data from source data view to destination data view
-		@param dst the DataView to equate
-		@param src the DataView to equate
+		@param data1 DataView to equate
+		@param data2 DataView to equate
+		@returns true if data is equal
 	*/
-	static equate_data( dst: DataView | null | undefined, src: DataView | null | undefined ): boolean {
-		if ( dst == null && src == null ) {
+	static equate_data( data1: DataView | null | undefined, data2: DataView | null | undefined ): boolean {
+		if ( data1 == null && data2 == null ) {
 			return true;
 		}
-		if ( dst == null || src == null ) {
+		if ( data1 == null || data2 == null ) {
 			return false;
 		}
-		if ( dst.byteLength !== src.byteLength ) {
+		if ( data1.byteLength !== data2.byteLength ) {
 			return false;
 		}
-		const length = Math.min( dst.byteLength, src.byteLength, MESSAGE_DATA_MAX_UINT32 );
+		const length = Math.min( data1.byteLength, data2.byteLength, MESSAGE_DATA_MAX_UINT32 );
 		for ( let lfi = length - 3, i = 0; i < length; ) {
 			if ( i < lfi ) {
-				if ( dst.getUint32( i ) !== src.getUint32( i ) ) {
+				if ( data1.getUint32( i ) !== data2.getUint32( i ) ) {
 					return false;
 				}
 				i += 4;
 			}
 			else {
-				if ( dst.getUint8( i ) !== src.getUint8( i ) ) {
+				if ( data1.getUint8( i ) !== data2.getUint8( i ) ) {
 					return false;
 				}
 				++i;

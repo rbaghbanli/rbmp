@@ -68,114 +68,113 @@ export class Message_Data_Test {
 				' aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse' +
 				' cillum dolore eu fugiat nulla pariatur.', 'string' ],
 		].forEach( prm => {
-			let tv: any = prm[ 0 ];
+			const tv: any = prm[ 0 ];
 			const type: string = prm[ 1 ] as string;
 			let rv: any = null;
 			let e = false;
-			const msg = new Message_Data();
+			const msg = new Message_Data( '' );
 			switch ( type ) {
 				case 'byte':
-				msg.write_byte( tv );
-				rv = msg.read_byte();
-				e = tv === rv;
-				break;
+					msg.write_byte( tv );
+					rv = msg.read_byte();
+					e = tv === rv;
+					break;
 				case 'uint16':
-				msg.write_uint16( tv );
-				rv = msg.read_uint16();
-				e = tv === rv;
-				break;
+					msg.write_uint16( tv );
+					rv = msg.read_uint16();
+					e = tv === rv;
+					break;
 				case 'uint32':
-				msg.write_uint32( tv );
-				rv = msg.read_uint32();
-				e = tv === rv;
-				break;
+					msg.write_uint32( tv );
+					rv = msg.read_uint32();
+					e = tv === rv;
+					break;
 				case 'uint64':
-				msg.write_uint64( tv );
-				rv = msg.read_uint64();
-				e = tv === rv;
-				break;
+					msg.write_uint64( tv );
+					rv = msg.read_uint64();
+					e = tv === rv;
+					break;
 				case 'uint128':
-				msg.write_uint128( tv );
-				rv = msg.read_uint128();
-				e = tv === rv;
-				break;
+					msg.write_uint128( tv );
+					rv = msg.read_uint128();
+					e = tv === rv;
+					break;
 				case 'int16':
-				msg.write_int16( tv );
-				rv = msg.read_int16();
-				e = tv === rv;
-				break;
+					msg.write_int16( tv );
+					rv = msg.read_int16();
+					e = tv === rv;
+					break;
 				case 'int32':
-				msg.write_int32( tv );
-				rv = msg.read_int32();
-				e = tv === rv;
-				break;
+					msg.write_int32( tv );
+					rv = msg.read_int32();
+					e = tv === rv;
+					break;
 				case 'int64':
-				msg.write_int64( tv );
-				rv = msg.read_int64();
-				e = tv === rv;
-				break;
+					msg.write_int64( tv );
+					rv = msg.read_int64();
+					e = tv === rv;
+					break;
 				case 'int128':
-				msg.write_int128( tv );
-				rv = msg.read_int128();
-				e = tv === rv;
-				break;
+					msg.write_int128( tv );
+					rv = msg.read_int128();
+					e = tv === rv;
+					break;
 				case 'float32':
-				msg.write_float32( tv );
-				rv = msg.read_float32();
-				e = tv === rv;
-				break;
+					msg.write_float32( tv );
+					rv = msg.read_float32();
+					e = tv === rv;
+					break;
 				case 'float64':
-				msg.write_float64( tv );
-				rv = msg.read_float64();
-				e = tv === rv;
-				break;
+					msg.write_float64( tv );
+					rv = msg.read_float64();
+					e = tv === rv;
+					break;
 				case 'dat8':
-				msg.write_dat( tv );
-				rv = msg.read_dat( 8 );
-				e = Message_Data.equate_data( tv, rv );
-				break;
+					msg.write_dat( tv );
+					rv = msg.read_dat( 8 );
+					e = Message_Data.equate_data( tv, rv );
+					break;
 				case 'dat16':
-				msg.write_dat( tv );
-				rv = msg.read_dat( 16 );
-				e = Message_Data.equate_data( tv, rv );
-				break;
+					msg.write_dat( tv );
+					rv = msg.read_dat( 16 );
+					e = Message_Data.equate_data( tv, rv );
+					break;
 				case 'data':
-				msg.write_data( tv );
-				rv = msg.read_data();
-				e = Message_Data.equate_data( tv, rv );
-				break;
+					msg.write_data( tv );
+					rv = msg.read_data();
+					e = Message_Data.equate_data( tv, rv );
+					break;
 				case 'buf8':
-				msg.write_buf( tv );
-				rv = msg.read_buf( 8 );
-				e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
-				break;
+					msg.write_buf( tv );
+					rv = msg.read_buf( 8 );
+					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					break;
 				case 'buf16':
-				msg.write_buf( tv );
-				rv = msg.read_buf( 16 );
-				e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
-				break;
+					msg.write_buf( tv );
+					rv = msg.read_buf( 16 );
+					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					break;
 				case 'buffer':
-				msg.write_buffer( tv );
-				rv = msg.read_buffer();
-				e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
-				break;
+					msg.write_buffer( tv );
+					rv = msg.read_buffer();
+					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					break;
 				case 'str8':
-				msg.write_str( tv );
-				rv = msg.read_str( 8 );
-				e = tv === rv;
-				break;
+					msg.write_str( tv );
+					rv = msg.read_str( 8 );
+					e = tv === rv;
+					break;
 				case 'str16':
-				msg.write_str( tv );
-				rv = msg.read_str( 16 );
-				e = tv === rv;
-				break;
+					msg.write_str( tv );
+					rv = msg.read_str( 16 );
+					e = tv === rv;
+					break;
 				case 'string':
-				msg.write_string( tv );
-				rv = msg.read_string();
-				e = tv === rv;
-				break;
-				default:
-				break;
+					msg.write_string( tv );
+					rv = msg.read_string();
+					e = tv === rv;
+					break;
+				default: break;
 			}
 			if ( e ) {
 				++passed;
@@ -189,5 +188,31 @@ export class Message_Data_Test {
 		return failed;
 	}
 
+	test_read_write_data(): number {
+		let passed = 0, failed = 0;
+		console.log( `Binary_Message_Test.test_read_write_basic started` );
+		const tm1 = new Message_Data( 'abcd' );
+		const rm1 = new Message_Data( 'ab' );
+		rm1.write_uint16( 0 );
+		if ( rm1.byte_length === tm1.byte_length ) {
+			++passed;
+		}
+		else {
+			console.error( `test failed on ${ rm1.byte_length } expected ${ tm1.byte_length }` );
+			++failed;
+		}
+		const tm2 = new Message_Data( 'efgh' );
+		tm2.write_data( tm1.get_data() );
+		const rm2 = new Message_Data( tm2.get_data() );
+		if ( rm2.topic === tm2.topic ) {
+			++passed;
+		}
+		else {
+			console.error( `test failed on ${ rm2.topic } expected ${ tm2.topic }` );
+			++failed;
+		}
+		console.log( `test finished: passed ${ passed } failed ${ failed }` );
+		return failed;
+	}
 
 }

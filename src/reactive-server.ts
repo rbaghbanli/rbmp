@@ -35,14 +35,13 @@ export class Reactive_Server {
 
 	/**
 		Sends publication message to all WebSockets subscribed to the topic
-		@param topic string to identify subscribers
 		@param message data to publish
 		@returns number of messages sent
 	*/
-	publish( topic: string, message: Message_Data ): number {
+	publish( message: Message_Data ): number {
 		let num = 0;
 		try {
-			const connections = this._subscriptions.get( topic );
+			const connections = this._subscriptions.get( message.topic );
 			if ( connections ) {
 				for ( const [ websocket, count ] of connections ) {
 					if ( this.send( websocket, message ) ) {
@@ -58,14 +57,14 @@ export class Reactive_Server {
 						connections.delete( websocket );
 					}
 					if ( connections.size === 0 ) {
-						this._subscriptions.delete( topic );
+						this._subscriptions.delete( message.topic );
 					}
 				}
 			}
-			console.debug( `Reactive server: message ${ topic } published to ${ num } connections` );
+			console.debug( `Reactive server: message ${ message.topic } published to ${ num } connections` );
 		}
 		catch ( exc ) {
-			console.error( `Reactive server: message ${ topic } publish error ${ exc }` );
+			console.error( `Reactive server: message ${ message.topic } publish error ${ exc }` );
 		}
 		return num;
 	}
@@ -73,29 +72,29 @@ export class Reactive_Server {
 	/**
 		Subscribes WebSocket to or unsubscribes WebSocket from the message topic
 		@param ws WebSocket to subscribe or unsubscribe
-		@param topic string to identify subscribers
 		@param message data containing maximum number of messages to be sent to subscriber
 		@returns the maximum number of messages to be sent to subscriber
 	*/
-	subscribe( ws: any, topic: string, message: Message_Data ): number {
+	subscribe( ws: any, message: Message_Data ): number {
 		try {
 			const count = message.read_uint32();
-			let connections = this._subscriptions.get( topic );
+			let connections = this._subscriptions.get( message.topic );
+
 			if ( count === 0 ) {	// unsubscribe connection from topic
 				if ( connections ) {
 					connections.delete( ws );
 					if ( connections.size === 0 ) {
-						this._subscriptions.delete( topic );
+						this._subscriptions.delete( message.topic );
 					}
 				}
-				console.debug( `Reactive server: connection unsubscribed from message ${ topic }` );
+				console.debug( `Reactive server: connection unsubscribed from message ${ message.topic }` );
 			}
 			else {	// subscribe connection to topic
 				if ( !connections ) {
-					this._subscriptions.set( topic, connections = new Map<any, number>() );
+					this._subscriptions.set( message.topic, connections = new Map<any, number>() );
 				}
 				connections.set( ws, count );
-				console.debug( `Reactive server: connection subscribed to message ${ topic }` );
+				console.debug( `Reactive server: connection subscribed to message ${ message.topic }` );
 			}
 			return count;
 		}
