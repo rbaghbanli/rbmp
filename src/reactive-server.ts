@@ -79,7 +79,6 @@ export class Reactive_Server {
 		try {
 			const count = message.read_uint32();
 			let connections = this._subscriptions.get( message.topic );
-
 			if ( count === 0 ) {	// unsubscribe connection from topic
 				if ( connections ) {
 					connections.delete( ws );

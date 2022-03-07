@@ -24,10 +24,10 @@ export class Message_Data_Test {
 			[ 9223372036854775807n, 'int64' ],
 			[ -170141183460469231731687303715884105728n, 'int128' ],
 			[ 170141183460469231731687303715884105727n, 'int128' ],
-			[ -1.0, 'float32' ],
-			[ 1.0, 'float32' ],
-			[ -8000.505, 'float64' ],
-			[ 8000.505, 'float64' ],
+			[ -1.0, 'flop32' ],
+			[ 1.0, 'flop32' ],
+			[ -8000.505, 'flop64' ],
+			[ 8000.505, 'flop64' ],
 			[ new DataView( new Uint8Array( [ 255, 0, 255, 0, 65, 66, 67, 68 ] ).buffer ), 'dat8' ],
 			[ new DataView( new Uint8Array( [ 0, 0, 65, 66, 67, 68, 0, 0, 255, 0, 255, 0, 65, 66, 67, 68 ] ).buffer ), 'dat16' ],
 			[ new DataView( new Uint8Array( [] ).buffer ), 'data' ],
@@ -119,14 +119,14 @@ export class Message_Data_Test {
 					rv = msg.read_int128();
 					e = tv === rv;
 					break;
-				case 'float32':
-					msg.write_float32( tv );
-					rv = msg.read_float32();
+				case 'flop32':
+					msg.write_flop32( tv );
+					rv = msg.read_flop32();
 					e = tv === rv;
 					break;
-				case 'float64':
-					msg.write_float64( tv );
-					rv = msg.read_float64();
+				case 'flop64':
+					msg.write_flop64( tv );
+					rv = msg.read_flop64();
 					e = tv === rv;
 					break;
 				case 'dat8':

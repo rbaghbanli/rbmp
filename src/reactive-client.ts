@@ -7,13 +7,14 @@ export class Reactive_Client {
 	protected _websocket$ = new BehaviorSubject<any>( undefined );
 	protected _message$ = new Subject<Message_Data>();
 	protected _error$ = new Subject<string>();
+	protected _open = true;
 
 	constructor( ws_factory: () => any, min_reconnect_delay: number = 100, max_reconnect_delay: number = 60000 ) {
 		const min_delay = min_reconnect_delay > 10 ? min_reconnect_delay : 10;
 		const max_delay = max_reconnect_delay > 1000 ? max_reconnect_delay : 1000;
 		let interval = 0;
 		this._websocket$.pipe(
-			filter( ws => ws == null ),
+			filter( ws => ws == null && this._open ),
 			delay( interval ),
 		).subscribe(
 			() => {
@@ -44,7 +45,7 @@ export class Reactive_Client {
 				catch ( exc ) {
 					console.error( `Reactive client: websocket connect error ${ exc }` );
 					this._error$.next( `websocket connect error ${ exc }` );
-					this.close();
+					this.disconnect();
 				}
 				interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
 			}
@@ -73,14 +74,37 @@ export class Reactive_Client {
 	}
 
 	/**
-		Closes WebSocket if open
+		Reconnects WebSocket if disconnected
 	*/
-	close(): void {
+	reconnect(): void {
 		this._websocket$.pipe(
 			take( 1 )
 		).subscribe(
 			ws => {
 				try {
+					this._open = true;
+					if ( ws == null ) {
+						this._websocket$.next( undefined );
+					}
+				}
+				catch ( exc ) {
+					console.error( `Reactive client: websocket reconnect error ${ exc }` );
+					this._error$.next( `websocket reconnect error ${ exc }` );
+				}
+			}
+		);
+	}
+
+	/**
+		Disconnects WebSocket if connected
+	*/
+	disconnect(): void {
+		this._websocket$.pipe(
+			take( 1 )
+		).subscribe(
+			ws => {
+				try {
+					this._open = false;
 					if ( ws != null ) {
 						ws.close();
 					}

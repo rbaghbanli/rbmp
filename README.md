@@ -60,8 +60,8 @@ Sample code to request some data from publisher:
 ...
 // create message for request on topic 101010
 const req = new Message_Data( 'Topic 101010' );
-req.write_num64( 101011 );
-req.write_string( '101012' );
+req.write_int32( 101011 );
+req.write_string( 'text' );
 // post request and subscribe to response message
 conn.post( req ).subscribe( () => console.log( 'Response' ) );
 ...

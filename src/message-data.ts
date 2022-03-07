@@ -78,15 +78,6 @@ export class Message_Data {
 	}
 
 	/**
-		Returns new copy of the buffer with specified offset
-		@param offset number of bytes
-		@returns ArrayBuffer
-	*/
-	get_buffer( offset: number = 0 ): ArrayBuffer {
-		return this._data.buffer.slice( this._data.byteOffset + offset, this._data.byteOffset + this._write_offset - offset );
-	}
-
-	/**
 		Returns the new data with specified offset
 		@param offset number of bytes
 		@returns DataView
@@ -101,6 +92,23 @@ export class Message_Data {
 	*/
 	get_unread_data(): DataView {
 		return this.get_data( this._read_offset );
+	}
+
+	/**
+		Returns new copy of the buffer with specified offset
+		@param offset number of bytes
+		@returns ArrayBuffer
+	*/
+	get_buffer( offset: number = 0 ): ArrayBuffer {
+		return this._data.buffer.slice( this._data.byteOffset + offset, this._data.byteOffset + this._write_offset - offset );
+	}
+
+	/**
+		Returns the unread buffer
+		@returns ArrayBuffer
+	*/
+	get_unread_buffer(): ArrayBuffer {
+		return this.get_buffer( this._read_offset );
 	}
 
 	/**
@@ -235,19 +243,19 @@ export class Message_Data {
 		);
 	}
 
-	read_float32(): number {
+	read_flop32(): number {
 		return this.read( 4, d => d._data.getFloat32( d._read_offset ) );
 	}
 
-	write_float32( value: number ): void {
+	write_flop32( value: number ): void {
 		this.write( 4, value, ( d, v ) => d._data.setFloat32( d._write_offset, v ) );
 	}
 
-	read_float64(): number {
+	read_flop64(): number {
 		return this.read( 8, d => d._data.getFloat64( d._read_offset ) );
 	}
 
-	write_float64( value: number ): void {
+	write_flop64( value: number ): void {
 		this.write( 8, value, ( d, v ) => d._data.setFloat64( d._write_offset, v ) );
 	}
 
