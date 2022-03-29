@@ -37,9 +37,9 @@ export class Reactive_Client {
 						this._error$.next( `websocket [${ url }] error ${ event }` );
 					};
 					ws.onmessage = ( event: any ) => {
-						const buffer = event.data as ArrayBuffer;
-						console.debug( `Reactive client: received message ${ buffer.byteLength }` );
-						this._message$.next( new Binary_Message( buffer ) );
+						const msg = new Binary_Message( event.data as ArrayBuffer );
+						console.debug( `Reactive client: received message ${ msg.topic }` );
+						this._message$.next( msg );
 					};
 				}
 				catch ( exc ) {
