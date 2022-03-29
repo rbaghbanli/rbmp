@@ -1,6 +1,6 @@
-import { Message_Data } from '../message-data';
+import { Binary_Message } from '../binary-message';
 
-export class Message_Data_Test {
+export class Binary_Message_Test {
 
 	test_read_write(): number {
 		let passed = 0, failed = 0;
@@ -72,7 +72,7 @@ export class Message_Data_Test {
 			const type: string = prm[ 1 ] as string;
 			let rv: any = null;
 			let e = false;
-			const msg = new Message_Data( '' );
+			const msg = new Binary_Message( 'Test' );
 			switch ( type ) {
 				case 'byte':
 					msg.write_byte( tv );
@@ -132,32 +132,32 @@ export class Message_Data_Test {
 				case 'dat8':
 					msg.write_dat( tv );
 					rv = msg.read_dat( 8 );
-					e = Message_Data.equate_data( tv, rv );
+					e = Binary_Message.equate_data( tv, rv );
 					break;
 				case 'dat16':
 					msg.write_dat( tv );
 					rv = msg.read_dat( 16 );
-					e = Message_Data.equate_data( tv, rv );
+					e = Binary_Message.equate_data( tv, rv );
 					break;
 				case 'data':
 					msg.write_data( tv );
 					rv = msg.read_data();
-					e = Message_Data.equate_data( tv, rv );
+					e = Binary_Message.equate_data( tv, rv );
 					break;
 				case 'buf8':
 					msg.write_buf( tv );
 					rv = msg.read_buf( 8 );
-					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					e = Binary_Message.equate_data( new DataView( tv ), new DataView( rv ) );
 					break;
 				case 'buf16':
 					msg.write_buf( tv );
 					rv = msg.read_buf( 16 );
-					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					e = Binary_Message.equate_data( new DataView( tv ), new DataView( rv ) );
 					break;
 				case 'buffer':
 					msg.write_buffer( tv );
 					rv = msg.read_buffer();
-					e = Message_Data.equate_data( new DataView( tv ), new DataView( rv ) );
+					e = Binary_Message.equate_data( new DataView( tv ), new DataView( rv ) );
 					break;
 				case 'str8':
 					msg.write_str( tv );
@@ -191,8 +191,8 @@ export class Message_Data_Test {
 	test_read_write_data(): number {
 		let passed = 0, failed = 0;
 		console.log( `Binary_Message_Test.test_read_write_basic started` );
-		const tm1 = new Message_Data( 'abcd' );
-		const rm1 = new Message_Data( 'ab' );
+		const tm1 = new Binary_Message( 'abcd' );
+		const rm1 = new Binary_Message( 'ab' );
 		rm1.write_uint16( 0 );
 		if ( rm1.byte_length === tm1.byte_length ) {
 			++passed;
@@ -201,9 +201,9 @@ export class Message_Data_Test {
 			console.error( `test failed on ${ rm1.byte_length } expected ${ tm1.byte_length }` );
 			++failed;
 		}
-		const tm2 = new Message_Data( 'efgh' );
+		const tm2 = new Binary_Message( 'efgh' );
 		tm2.write_data( tm1.get_data() );
-		const rm2 = new Message_Data( tm2.get_data() );
+		const rm2 = new Binary_Message( tm2.get_data() );
 		if ( rm2.topic === tm2.topic ) {
 			++passed;
 		}

@@ -1,5 +1,5 @@
-import { Message_Data_Test } from './message-data-test';
+import { Binary_Message_Test } from './binary-message-test';
 
-const test = new Message_Data_Test();
+const test = new Binary_Message_Test();
 test.test_read_write();
 test.test_read_write_data();

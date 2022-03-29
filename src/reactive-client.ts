@@ -1,11 +1,11 @@
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { delay, filter, finalize, map, mergeMap, take } from 'rxjs/operators';
-import { Message_Data, MESSAGE_DATA_MAX_UINT32 } from './message-data';
+import { Binary_Message, BINARY_MESSAGE_MAX_UINT32 } from './binary-message';
 
 export class Reactive_Client {
 
 	protected _websocket$ = new BehaviorSubject<any>( undefined );
-	protected _message$ = new Subject<Message_Data>();
+	protected _message$ = new Subject<Binary_Message>();
 	protected _error$ = new Subject<string>();
 	protected _open = true;
 
@@ -39,7 +39,7 @@ export class Reactive_Client {
 					ws.onmessage = ( event: any ) => {
 						const buffer = event.data as ArrayBuffer;
 						console.debug( `Reactive client: received message ${ buffer.byteLength }` );
-						this._message$.next( new Message_Data( buffer ) );
+						this._message$.next( new Binary_Message( buffer ) );
 					};
 				}
 				catch ( exc ) {
@@ -62,7 +62,7 @@ export class Reactive_Client {
 	/**
 		The observable of messages
 	*/
-	get message(): Observable<Message_Data> {
+	get message(): Observable<Binary_Message> {
 		return this._message$;
 	}
 
@@ -121,9 +121,9 @@ export class Reactive_Client {
 		Returns the observable of incoming messages
 		@returns observable of messages
 	*/
-	emit(): Observable<Message_Data> {
+	emit(): Observable<Binary_Message> {
 		return this._message$.pipe(
-			map( m => new Message_Data( m ) )
+			map( m => new Binary_Message( m ) )
 		);
 	}
 
@@ -132,7 +132,7 @@ export class Reactive_Client {
 		@param message data to send
 		@returns observable of the completion event
 	*/
-	send( message: Message_Data ): Observable<void> {
+	send( message: Binary_Message ): Observable<void> {
 		return this._websocket$.pipe(
 			filter( ws => ws != null ),
 			map( ws => ws.send( message.get_data() ) ),
@@ -145,7 +145,7 @@ export class Reactive_Client {
 		@param message data to include in the request
 		@returns observable of the response message
 	*/
-	post( message: Message_Data ): Observable<Message_Data> {
+	post( message: Binary_Message ): Observable<Binary_Message> {
 		return this.send( message ).pipe(
 			mergeMap( () => this.emit() ),
 			filter( m => m.topic === message.topic ),
@@ -161,13 +161,13 @@ export class Reactive_Client {
 			if count is 0 then unsubscribes from the topic.
 		@returns observable of the published messages
 	*/
-	subscribe( topic: string, count?: number ): Observable<Message_Data> {
-		const cnt = count ?? MESSAGE_DATA_MAX_UINT32;
-		const msg = new Message_Data( topic );
+	subscribe( topic: string, count?: number ): Observable<Binary_Message> {
+		const cnt = count ?? BINARY_MESSAGE_MAX_UINT32;
+		const msg = new Binary_Message( topic );
 		msg.write_uint32( cnt );
 		return this.send( msg ).pipe(
 			mergeMap( () => this.emit() ),
-			filter( d => d.read_string() === topic ),
+			filter( m => m.topic === topic ),
 			take( cnt ),
 			finalize(
 				() => {

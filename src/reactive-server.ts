@@ -1,5 +1,4 @@
-import { Observable } from 'rxjs';
-import { Message_Data, MESSAGE_DATA_MAX_UINT32 } from './message-data';
+import { Binary_Message, BINARY_MESSAGE_MAX_UINT32 } from './binary-message';
 
 export class Reactive_Server {
 
@@ -18,7 +17,7 @@ export class Reactive_Server {
 		@param message data to send
 		@returns 1 if message is successfully sent, 0 otherwise
 	*/
-	send( ws: any, message: Message_Data ): number {
+	send( ws: any, message: Binary_Message ): number {
 		try {
 			if ( ws && ws.readyState === this._ws_ready ) {
 				ws.send( message.get_data() );
@@ -38,7 +37,7 @@ export class Reactive_Server {
 		@param message data to publish
 		@returns number of messages sent
 	*/
-	publish( message: Message_Data ): number {
+	publish( message: Binary_Message ): number {
 		let num = 0;
 		try {
 			const connections = this._subscriptions.get( message.topic );
@@ -49,7 +48,7 @@ export class Reactive_Server {
 						if ( count < 1 ) {
 							connections.delete( websocket );
 						}
-						else if ( count < MESSAGE_DATA_MAX_UINT32 ) {
+						else if ( count < BINARY_MESSAGE_MAX_UINT32 ) {
 							connections.set( websocket, count - 1 );
 						}
 					}
@@ -75,7 +74,7 @@ export class Reactive_Server {
 		@param message data containing maximum number of messages to be sent to subscriber
 		@returns the maximum number of messages to be sent to subscriber
 	*/
-	subscribe( ws: any, message: Message_Data ): number {
+	subscribe( ws: any, message: Binary_Message ): number {
 		try {
 			const count = message.read_uint32();
 			let connections = this._subscriptions.get( message.topic );

@@ -1,9 +1,9 @@
-export const MESSAGE_DATA_START_LENGTH = 64;
-export const MESSAGE_DATA_MAX_UINT64 = BigInt.asUintN( 64, -1n );
-export const MESSAGE_DATA_MAX_UINT32 = -1 >>> 0;
-export const MESSAGE_DATA_MS_IN_DAY = 24 * 60 * 60 * 1000;
+export const BINARY_MESSAGE_START_LENGTH = 64;
+export const BINARY_MESSAGE_MAX_UINT64 = BigInt.asUintN( 64, -1n );
+export const BINARY_MESSAGE_MAX_UINT32 = -1 >>> 0;
+export const BINARY_MESSAGE_MS_IN_DAY = 24 * 60 * 60 * 1000;
 
-export class Message_Data {
+export class Binary_Message {
 
 	protected _data: DataView;
 	protected _write_offset: number;
@@ -11,18 +11,18 @@ export class Message_Data {
 	protected _topic: string;
 
 	/**
-		Constructs message data
-		@param data string, Message_Data, DataView, or ArrayBufferLike to initiate message data
+		Constructs message
+		@param data string, Binary_Message, DataView, or ArrayBufferLike to initiate message data
 	*/
-	constructor( data: string | Message_Data | DataView | ArrayBufferLike ) {
+	constructor( data: string | Binary_Message | DataView | ArrayBufferLike ) {
 		if ( typeof data === 'string' ) {
-			this._data = new DataView( new ArrayBuffer( MESSAGE_DATA_START_LENGTH + data.length ) );
+			this._data = new DataView( new ArrayBuffer( BINARY_MESSAGE_START_LENGTH + data.length ) );
 			this._write_offset = 0;
 			this.write_string( data );
 			this._read_offset = this._write_offset;
 			this._topic = data;
 		}
-		else if ( data instanceof Message_Data ) {
+		else if ( data instanceof Binary_Message ) {
 			this._data = data._data;
 			this._write_offset = data._write_offset;
 			this._read_offset = data._read_offset;
@@ -124,7 +124,7 @@ export class Message_Data {
 	*/
 	add_capacity( increment: number ): void {
 		const data = new DataView( new ArrayBuffer( this._data.buffer.byteLength + increment ) );
-		Message_Data.copy_data( data, this._data );
+		Binary_Message.copy_data( data, this._data );
 		this._data = data;
 	}
 
@@ -133,21 +133,21 @@ export class Message_Data {
 	*/
 	trim_capacity(): void {
 		const data = new DataView( new ArrayBuffer( this._write_offset ) );
-		Message_Data.copy_data( data, this._data );
+		Binary_Message.copy_data( data, this._data );
 		this._data = data;
 	}
 
-	protected read<T>( increment: number, f: ( d: Message_Data ) => T ): T {
+	protected read<T>( increment: number, f: ( m: Binary_Message ) => T ): T {
 		const offset = this._read_offset + increment;
 		if ( offset > this._write_offset ) {
-			throw new RangeError( `buffer data size ${this._data.byteLength} exceeded by ${offset - this._data.byteLength}\n${ this.toString() }` );
+			throw new RangeError( `buffer data size ${ this._data.byteLength } exceeded by ${ offset - this._data.byteLength }\n${ this.toString() }` );
 		}
 		const v = f( this );
 		this._read_offset = offset;
 		return v;
 	}
 
-	protected write<T>( increment: number, value: T, f: ( d: Message_Data, v: T ) => void ): void {
+	protected write<T>( increment: number, value: T, f: ( m: Binary_Message, v: T ) => void ): void {
 		const offset = this._write_offset + increment;
 		if ( offset > this._data.byteLength ) {
 			const deficit = offset - this._data.byteLength;
@@ -158,105 +158,105 @@ export class Message_Data {
 	}
 
 	read_byte(): number {
-		return this.read( 1, d => d._data.getUint8( d._read_offset ) );
+		return this.read( 1, m => m._data.getUint8( m._read_offset ) );
 	}
 
 	write_byte( value: number ): void {
-		this.write( 1, value, ( d, v ) => d._data.setUint8( d._write_offset, v ) );
+		this.write( 1, value, ( m, v ) => m._data.setUint8( m._write_offset, v ) );
 	}
 
 	read_uint16(): number {
-		return this.read( 2, d => d._data.getUint16( d._read_offset ) );
+		return this.read( 2, m => m._data.getUint16( m._read_offset ) );
 	}
 
 	write_uint16( value: number ): void {
-		this.write( 2, value, ( d, v ) => d._data.setUint16( d._write_offset, v ) );
+		this.write( 2, value, ( m, v ) => m._data.setUint16( m._write_offset, v ) );
 	}
 
 	read_uint32(): number {
-		return this.read( 4, d => d._data.getUint32( d._read_offset ) );
+		return this.read( 4, m => m._data.getUint32( m._read_offset ) );
 	}
 
 	write_uint32( value: number ): void {
-		this.write( 4, value, ( d, v ) => d._data.setUint32( d._write_offset, v ) );
+		this.write( 4, value, ( m, v ) => m._data.setUint32( m._write_offset, v ) );
 	}
 
 	read_uint64(): bigint {
-		return this.read( 8, d => d._data.getBigUint64( d._read_offset ) );
+		return this.read( 8, m => m._data.getBigUint64( m._read_offset ) );
 	}
 
 	write_uint64( value: bigint ): void {
-		this.write( 8, value, ( d, v ) => d._data.setBigUint64( d._write_offset, v ) );
+		this.write( 8, value, ( m, v ) => m._data.setBigUint64( m._write_offset, v ) );
 	}
 
 	read_uint128(): bigint {
 		return this.read( 16,
-			d => ( ( d._data.getBigUint64( d._read_offset ) << 64n ) + d._data.getBigUint64( d._read_offset + 8 ) )
+			m => ( ( m._data.getBigUint64( m._read_offset ) << 64n ) + m._data.getBigUint64( m._read_offset + 8 ) )
 		);
 	}
 
 	write_uint128( value: bigint ): void {
 		this.write( 16, value,
-			( d, v ) => {
-				d._data.setBigUint64( d._write_offset, v >> 64n );
-				d._data.setBigUint64( d._write_offset + 8, v & MESSAGE_DATA_MAX_UINT64 );
+			( m, v ) => {
+				m._data.setBigUint64( m._write_offset, v >> 64n );
+				m._data.setBigUint64( m._write_offset + 8, v & BINARY_MESSAGE_MAX_UINT64 );
 			}
 		);
 	}
 
 	read_int16(): number {
-		return this.read( 2, d => d._data.getInt16( d._read_offset ) );
+		return this.read( 2, m => m._data.getInt16( m._read_offset ) );
 	}
 
 	write_int16( value: number ): void {
-		this.write( 2, value, ( d, v ) => d._data.setInt16( d._write_offset, v ) );
+		this.write( 2, value, ( m, v ) => m._data.setInt16( m._write_offset, v ) );
 	}
 
 	read_int32(): number {
-		return this.read( 4, d => d._data.getInt32( d._read_offset ) );
+		return this.read( 4, m => m._data.getInt32( m._read_offset ) );
 	}
 
 	write_int32( value: number ): void {
-		this.write( 4, value, ( d, v ) => d._data.setInt32( d._write_offset, v ) );
+		this.write( 4, value, ( m, v ) => m._data.setInt32( m._write_offset, v ) );
 	}
 
 	read_int64(): bigint {
-		return this.read( 8, d => d._data.getBigInt64( d._read_offset ) );
+		return this.read( 8, m => m._data.getBigInt64( m._read_offset ) );
 	}
 
 	write_int64( value: bigint ): void {
-		this.write( 8, value, ( d, v ) => d._data.setBigInt64( d._write_offset, v ) );
+		this.write( 8, value, ( m, v ) => m._data.setBigInt64( m._write_offset, v ) );
 	}
 
 	read_int128(): bigint {
 		return this.read( 16,
-			d => ( ( d._data.getBigInt64( d._read_offset ) << 64n ) + d._data.getBigUint64( d._read_offset + 8 ) )
+			m => ( ( m._data.getBigInt64( m._read_offset ) << 64n ) + m._data.getBigUint64( m._read_offset + 8 ) )
 		);
 	}
 
 	write_int128( value: bigint ): void {
 		this.write( 16, value,
-			( d, v ) => {
-				d._data.setBigInt64( d._write_offset, v >> 64n );
-				d._data.setBigUint64( d._write_offset + 8, v & MESSAGE_DATA_MAX_UINT64 );
+			( m, v ) => {
+				m._data.setBigInt64( m._write_offset, v >> 64n );
+				m._data.setBigUint64( m._write_offset + 8, v & BINARY_MESSAGE_MAX_UINT64 );
 			}
 		);
 	}
 
 	read_flop32(): number {
-		return this.read( 4, d => d._data.getFloat32( d._read_offset ) );
+		return this.read( 4, m => m._data.getFloat32( m._read_offset ) );
 	}
 
 	write_flop32( value: number ): void {
-		this.write( 4, value, ( d, v ) => d._data.setFloat32( d._write_offset, v ) );
+		this.write( 4, value, ( m, v ) => m._data.setFloat32( m._write_offset, v ) );
 	}
 
 	read_flop64(): number {
-		return this.read( 8, d => d._data.getFloat64( d._read_offset ) );
+		return this.read( 8, m => m._data.getFloat64( m._read_offset ) );
 	}
 
 	write_flop64( value: number ): void {
-		this.write( 8, value, ( d, v ) => d._data.setFloat64( d._write_offset, v ) );
+		this.write( 8, value, ( m, v ) => m._data.setFloat64( m._write_offset, v ) );
 	}
 
 	/**
@@ -265,9 +265,9 @@ export class Message_Data {
 		@returns DataView
 	*/
 	read_dat( length: number ): DataView {
-		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
+		const len = Math.min( length || 0, BINARY_MESSAGE_MAX_UINT32 );
 		return this.read( len,
-			d => new DataView( d._data.buffer, d._data.byteOffset + d._read_offset, len )
+			m => new DataView( m._data.buffer, m._data.byteOffset + m._read_offset, len )
 		);
 	}
 
@@ -277,7 +277,7 @@ export class Message_Data {
 	*/
 	write_dat( value: DataView ): void {
 		this.write( value.byteLength, value,
-			( d, v ) => Message_Data.copy_data( new DataView( d._data.buffer, d._data.byteOffset + d._write_offset, v.byteLength ), v )
+			( m, v ) => Binary_Message.copy_data( new DataView( m._data.buffer, m._data.byteOffset + m._write_offset, v.byteLength ), v )
 		);
 	}
 
@@ -287,9 +287,9 @@ export class Message_Data {
 		@returns ArrayBuffer
 	*/
 	read_buf( length: number ): ArrayBuffer {
-		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
+		const len = Math.min( length || 0, BINARY_MESSAGE_MAX_UINT32 );
 		return this.read( len,
-			d => d._data.buffer.slice( d._data.byteOffset + d._read_offset, d._data.byteOffset + d._read_offset + len )
+			m => m._data.buffer.slice( m._data.byteOffset + m._read_offset, m._data.byteOffset + m._read_offset + len )
 		);
 	}
 
@@ -299,7 +299,7 @@ export class Message_Data {
 	*/
 	write_buf( value: ArrayBufferLike ): void {
 		this.write( value.byteLength, value,
-			( d, v ) => Message_Data.copy_data( new DataView( d._data.buffer, d._data.byteOffset + d._write_offset, v.byteLength ), new DataView( v ) )
+			( m, v ) => Binary_Message.copy_data( new DataView( m._data.buffer, m._data.byteOffset + m._write_offset, v.byteLength ), new DataView( v ) )
 		);
 	}
 
@@ -309,7 +309,7 @@ export class Message_Data {
 		@returns string
 	*/
 	read_str( length: number ): string {
-		const len = Math.min( length || 0, MESSAGE_DATA_MAX_UINT32 );
+		const len = Math.min( length || 0, BINARY_MESSAGE_MAX_UINT32 );
 		return new TextDecoder().decode( this.read_dat( len ) );
 	}
 
@@ -318,7 +318,7 @@ export class Message_Data {
 		@param value string to write
 	*/
 	write_str( value: string ): void {
-		const len = Math.min( value.length || 0, MESSAGE_DATA_MAX_UINT32 );
+		const len = Math.min( value.length || 0, BINARY_MESSAGE_MAX_UINT32 );
 		this.write_buf( new TextEncoder().encode( value ).buffer.slice( 0, len ) );
 	}
 
@@ -339,11 +339,11 @@ export class Message_Data {
 	}
 
 	read_date(): Date {
-		return new Date( this.read_int32() * MESSAGE_DATA_MS_IN_DAY );
+		return new Date( this.read_int32() * BINARY_MESSAGE_MS_IN_DAY );
 	}
 
 	write_date( value: Date ): void {
-		this.write_int32( value.getTime() / MESSAGE_DATA_MS_IN_DAY );
+		this.write_int32( value.getTime() / BINARY_MESSAGE_MS_IN_DAY );
 	}
 
 	read_time(): Date {
@@ -359,7 +359,7 @@ export class Message_Data {
 	}
 
 	write_data( value: DataView ): void {
-		this.write_length( Math.min( value.byteLength, MESSAGE_DATA_MAX_UINT32 ) );
+		this.write_length( Math.min( value.byteLength, BINARY_MESSAGE_MAX_UINT32 ) );
 		this.write_dat( value );
 	}
 
@@ -368,7 +368,7 @@ export class Message_Data {
 	}
 
 	write_buffer( value: ArrayBuffer ): void {
-		this.write_length( Math.min( value.byteLength, MESSAGE_DATA_MAX_UINT32 ) );
+		this.write_length( Math.min( value.byteLength, BINARY_MESSAGE_MAX_UINT32 ) );
 		this.write_buf( value );
 	}
 
@@ -380,11 +380,11 @@ export class Message_Data {
 		this.write_buffer( new TextEncoder().encode( value ).buffer );
 	}
 
-	read_nullable<T>( reader: ( d: Message_Data ) => T ): T | null {
+	read_nullable<T>( reader: ( m: Binary_Message ) => T ): T | null {
 		return this.read_bool() ? reader( this ) : null;
 	}
 
-	write_nullable<T>( value: T | null | undefined, writer: ( d: Message_Data, v: T ) => void ): void {
+	write_nullable<T>( value: T | null | undefined, writer: ( m: Binary_Message, v: T ) => void ): void {
 		if ( value != null ) {
 			this.write_bool( true );
 			writer( this, value );
@@ -394,7 +394,7 @@ export class Message_Data {
 		}
 	}
 
-	read_array<T>( reader: ( d: Message_Data ) => T ): T[] {
+	read_array<T>( reader: ( m: Binary_Message ) => T ): T[] {
 		const length = this.read_length();
 		const value = new Array<T>( length );
 		for ( let i = 0; i < length; ++i ) {
@@ -403,15 +403,15 @@ export class Message_Data {
 		return value;
 	}
 
-	write_array<T>( value: T[], writer: ( d: Message_Data, v: T ) => void ): void {
-		const length = Math.min( value.length, MESSAGE_DATA_MAX_UINT32 );
+	write_array<T>( value: T[], writer: ( m: Binary_Message, v: T ) => void ): void {
+		const length = Math.min( value.length, BINARY_MESSAGE_MAX_UINT32 );
 		this.write_length( length );
 		for ( let i = 0; i < length; ++i ) {
 			writer( this, value[ i ] );
 		}
 	}
 
-	read_set<K>( reader: ( d: Message_Data ) => K ): Set<K> {
+	read_set<K>( reader: ( m: Binary_Message ) => K ): Set<K> {
 		const size = this.read_length();
 		const value = new Set<K>();
 		for ( let i = 0; i < size; ++i ) {
@@ -421,8 +421,8 @@ export class Message_Data {
 		return value;
 	}
 
-	write_set<K>( value: Set<K>, writer: ( d: Message_Data, k: K ) => void ): void {
-		let size = Math.min( value.size, MESSAGE_DATA_MAX_UINT32 );
+	write_set<K>( value: Set<K>, writer: ( m: Binary_Message, k: K ) => void ): void {
+		let size = Math.min( value.size, BINARY_MESSAGE_MAX_UINT32 );
 		this.write_length( size );
 		for ( const [ k ] of value.entries() ) {
 			if ( --size < 0 ) {
@@ -432,7 +432,7 @@ export class Message_Data {
 		}
 	}
 
-	read_map<K, V>( reader: ( d: Message_Data ) => [ K, V ] ): Map<K, V> {
+	read_map<K, V>( reader: ( m: Binary_Message ) => [ K, V ] ): Map<K, V> {
 		const size = this.read_length();
 		const value = new Map<K, V>();
 		for ( let i = 0; i < size; ++i ) {
@@ -442,8 +442,8 @@ export class Message_Data {
 		return value;
 	}
 
-	write_map<K, V>( value: Map< K, V>, writer: ( d: Message_Data, v: [ K, V ] ) => void ): void {
-		let size = Math.min( value.size, MESSAGE_DATA_MAX_UINT32 );
+	write_map<K, V>( value: Map< K, V>, writer: ( m: Binary_Message, v: [ K, V ] ) => void ): void {
+		let size = Math.min( value.size, BINARY_MESSAGE_MAX_UINT32 );
 		this.write_length( size );
 		for ( const [ k, v ] of value ) {
 			if ( --size < 0 ) {
@@ -455,7 +455,7 @@ export class Message_Data {
 
 	toString(): string {
 		const bytes = Array.from( new Uint8Array( this._data.buffer.slice( this._data.byteOffset, this._data.byteOffset + this._write_offset ) ) );
-		return `${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
+		return `[${ this._topic }] ${ bytes.map( b => b.toString( 16 ).padStart( 2, '0' ) ).join( ' ' ) }`;
 	}
 
 	/**
@@ -464,7 +464,7 @@ export class Message_Data {
 		@param src the DataView to copy from
 	*/
 	static copy_data( dst: DataView, src: DataView ): void {
-		const length = Math.min( dst.byteLength, src.byteLength, MESSAGE_DATA_MAX_UINT32 );
+		const length = Math.min( dst.byteLength, src.byteLength, BINARY_MESSAGE_MAX_UINT32 );
 		for ( let lfi = length - 3, i = 0; i < length; ) {
 			if ( i < lfi ) {
 				dst.setUint32( i, src.getUint32( i ) );
@@ -493,7 +493,7 @@ export class Message_Data {
 		if ( data1.byteLength !== data2.byteLength ) {
 			return false;
 		}
-		const length = Math.min( data1.byteLength, data2.byteLength, MESSAGE_DATA_MAX_UINT32 );
+		const length = Math.min( data1.byteLength, data2.byteLength, BINARY_MESSAGE_MAX_UINT32 );
 		for ( let lfi = length - 3, i = 0; i < length; ) {
 			if ( i < lfi ) {
 				if ( data1.getUint32( i ) !== data2.getUint32( i ) ) {
