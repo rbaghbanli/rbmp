@@ -4,117 +4,92 @@ import { Binary_Message, BINARY_MESSAGE_MAX_UINT32 } from './binary-message';
 
 export class Reactive_Client {
 
-	protected _websocket$ = new BehaviorSubject<any>( undefined );
-	protected _message$ = new Subject<Binary_Message>();
+	protected _websocket: any;
+	protected _state$ = new BehaviorSubject<boolean | undefined>( undefined );
 	protected _error$ = new Subject<string>();
-	protected _open = true;
+	protected _message$ = new Subject<Binary_Message>();
 
 	constructor( ws_factory: () => any, min_reconnect_delay: number = 100, max_reconnect_delay: number = 60000 ) {
 		const min_delay = min_reconnect_delay > 10 ? min_reconnect_delay : 10;
 		const max_delay = max_reconnect_delay > 1000 ? max_reconnect_delay : 1000;
 		let interval = 0;
-		this._websocket$.pipe(
-			filter( ws => ws == null && this._open ),
+		this._state$.pipe(
+			filter( state => !state ),
 			delay( interval ),
 		).subscribe(
 			() => {
 				try {
-					const ws = ws_factory();
-					ws.binaryType = 'arraybuffer';
-					const url = ws.url;
-					console.debug( `Reactive client: websocket [${ url }] connecting...` );
-					const ts = new Date().getTime();
-					ws.onopen = () => {
-						console.debug( `Reactive client: websocket [${ url }] connected in ${ new Date().getTime() - ts }ms` );
-						this._websocket$.next( ws );
-					};
-					ws.onclose = ( event: any ) => {
-						console.debug( `Reactive client: websocket [${ url }] disconnected with code ${ event.code } reason ${ event.reason }` );
-						this._websocket$.next( undefined );
-					};
-					ws.onerror = ( event: any ) => {
-						console.debug( `Reactive client: websocket [${ url }] error ${ event }` );
-						this._error$.next( `websocket [${ url }] error ${ event }` );
-					};
-					ws.onmessage = ( event: any ) => {
-						const msg = new Binary_Message( event.data as ArrayBuffer );
-						console.debug( `Reactive client: received message ${ msg.topic }` );
-						this._message$.next( msg );
-					};
+					if ( this._websocket ) {
+						this._websocket.close();
+						this._websocket = undefined;
+					}
+					if ( this._state$.value === undefined ) {
+						const ws = this._websocket = ws_factory();
+						ws.binaryType = 'arraybuffer';
+						const url = ws.url;
+						console.debug( `Reactive client: websocket [${ url }] connecting...` );
+						const ts = new Date().getTime();
+						ws.onopen = () => {
+							console.debug( `Reactive client: websocket [${ url }] connected in ${ new Date().getTime() - ts }ms` );
+							interval = 0;
+							this._state$.next( true );
+						};
+						ws.onclose = ( event: any ) => {
+							console.debug( `Reactive client: websocket [${ url }] disconnected with code ${ event.code } reason ${ event.reason }` );
+							if ( this._state$.value ) {
+								this._state$.next( undefined );
+							}
+						};
+						ws.onerror = ( event: any ) => {
+							console.debug( `Reactive client: websocket [${ url }] error ${ event }` );
+							this._error$.next( `websocket [${ url }] error ${ event }` );
+						};
+						ws.onmessage = ( event: any ) => {
+							const msg = new Binary_Message( event.data as ArrayBuffer );
+							console.debug( `Reactive client: received message ${ msg.topic }` );
+							this._message$.next( msg );
+						};
+					}
 				}
 				catch ( exc ) {
 					console.error( `Reactive client: websocket connect error ${ exc }` );
 					this._error$.next( `websocket connect error ${ exc }` );
-					this.disconnect();
+					interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
+					if ( this._state$.value === undefined ) {
+						this._state$.next( undefined );
+					}
 				}
-				interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
 			}
 		);
 	}
 
 	/**
-		The observable of WebSocket
+		WebSocket
 	*/
-	get websocket(): Observable<any> {
-		return this._websocket$;
+	get websocket(): any {
+		return this._websocket;
 	}
 
 	/**
-		The observable of messages
-	*/
-	get message(): Observable<Binary_Message> {
-		return this._message$;
-	}
-
-	/**
-	 	The observable of errors
-	*/
-	get error(): Observable<string> {
-		return this._error$;
-	}
-
-	/**
-		Reconnects WebSocket if disconnected
+		Reconnects WebSocket
 	*/
 	reconnect(): void {
-		this._websocket$.pipe(
-			take( 1 )
-		).subscribe(
-			ws => {
-				try {
-					this._open = true;
-					if ( ws == null ) {
-						this._websocket$.next( undefined );
-					}
-				}
-				catch ( exc ) {
-					console.error( `Reactive client: websocket reconnect error ${ exc }` );
-					this._error$.next( `websocket reconnect error ${ exc }` );
-				}
-			}
-		);
+		this._state$.next( undefined );
 	}
 
 	/**
-		Disconnects WebSocket if connected
+		Disconnects WebSocket
 	*/
 	disconnect(): void {
-		this._websocket$.pipe(
-			take( 1 )
-		).subscribe(
-			ws => {
-				try {
-					this._open = false;
-					if ( ws != null ) {
-						ws.close();
-					}
-				}
-				catch ( exc ) {
-					console.error( `Reactive client: websocket disconnect error ${ exc }` );
-					this._error$.next( `websocket disconnect error ${ exc }` );
-				}
-			}
-		);
+		this._state$.next( false );
+	}
+
+	/**
+	 	Returns the observable of of errors
+		@returns observable of string containing the error message
+	*/
+	error(): Observable<string> {
+		return this._error$;
 	}
 
 	/**
@@ -133,9 +108,9 @@ export class Reactive_Client {
 		@returns observable of the completion event
 	*/
 	send( message: Binary_Message ): Observable<void> {
-		return this._websocket$.pipe(
-			filter( ws => ws != null ),
-			map( ws => ws.send( message.get_data() ) ),
+		return this._state$.pipe(
+			filter( state => !!state ),
+			map( () => this._websocket.send( message.get_data() ) ),
 			take( 1 )
 		);
 	}
