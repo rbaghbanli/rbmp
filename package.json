@@ -1,6 +1,6 @@
 {
 	"name": "rbmp",
-	"version": "2.2.0",
+	"version": "2.2.2",
 	"description": "Reactive Binary Messaging Protocol",
 	"main": "dst/index.js",
 	"types": "dst/index.d.ts",
@@ -45,10 +45,10 @@
 		"rxjs": "^7.5.5"
 	},
 	"devDependencies": {
-		"@typescript-eslint/parser": "^5.17.0",
-		"@typescript-eslint/eslint-plugin": "^5.17.0",
-		"eslint": "^8.12.0",
+		"@typescript-eslint/parser": "^5.30.7",
+		"@typescript-eslint/eslint-plugin": "^5.30.7",
+		"eslint": "^8.20.0",
 		"rimraf": "^3.0.2",
-		"typescript": "^4.5.5"
+		"typescript": "^4.7.4"
 	}
 }

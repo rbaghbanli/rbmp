@@ -14,53 +14,49 @@ export class Reactive_Client {
 		const max_delay = max_reconnect_delay > 1000 ? max_reconnect_delay : 1000;
 		let interval = 0;
 		this._state$.pipe(
-			filter( state => !state ),
+			filter( state => state === undefined && !this._websocket ),
 			delay( interval ),
-		).subscribe(
-			() => {
+		).subscribe( {
+			next: () => {
 				try {
-					if ( this._websocket ) {
-						this._websocket.close();
+					this._websocket = ws_factory();
+					this._websocket.binaryType = 'arraybuffer';
+					const url = this._websocket.url;
+					console.debug( `Reactive client: websocket [${ url }] connecting...` );
+					const ts = new Date().getTime();
+					this._websocket.onopen = () => {
+						console.debug( `Reactive client: websocket [${ url }] connected in ${ new Date().getTime() - ts }ms` );
+						interval = 0;
+						this._state$.next( true );
+					};
+					this._websocket.onclose = ( event: any ) => {
+						console.debug( `Reactive client: websocket [${ url }] disconnected with code ${ event.code ?? JSON.stringify( event ) }` );
+						interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
 						this._websocket = undefined;
-					}
-					if ( this._state$.value === undefined ) {
-						const ws = this._websocket = ws_factory();
-						ws.binaryType = 'arraybuffer';
-						const url = ws.url;
-						console.debug( `Reactive client: websocket [${ url }] connecting...` );
-						const ts = new Date().getTime();
-						ws.onopen = () => {
-							console.debug( `Reactive client: websocket [${ url }] connected in ${ new Date().getTime() - ts }ms` );
-							interval = 0;
-							this._state$.next( true );
-						};
-						ws.onclose = ( event: any ) => {
-							console.debug( `Reactive client: websocket [${ url }] disconnected with code ${ event.code } reason ${ event.reason }` );
-							if ( this._state$.value ) {
-								this._state$.next( undefined );
-							}
-						};
-						ws.onerror = ( event: any ) => {
-							console.debug( `Reactive client: websocket [${ url }] error ${ event }` );
-							this._error$.next( `websocket [${ url }] error ${ event }` );
-						};
-						ws.onmessage = ( event: any ) => {
-							const msg = new Binary_Message( event.data as ArrayBuffer );
-							console.debug( `Reactive client: received message ${ msg.topic }` );
-							this._message$.next( msg );
-						};
-					}
+						if ( this._state$.value !== false ) {
+							this._state$.next( undefined );
+						}
+					};
+					this._websocket.onerror = ( event: any ) => {
+						console.debug( `Reactive client: websocket [${ url }] failed on ${ event.type ?? JSON.stringify( event ) }` );
+						this._error$.next( `websocket [${ url }] failed on ${ event.type ?? JSON.stringify( event ) }` );
+					};
+					this._websocket.onmessage = ( event: any ) => {
+						const msg = new Binary_Message( event.data as ArrayBuffer );
+						this._message$.next( msg );
+					};
 				}
 				catch ( exc ) {
-					console.error( `Reactive client: websocket connect error ${ exc }` );
-					this._error$.next( `websocket connect error ${ exc }` );
+					console.error( `Reactive client: websocket error ${ exc }` );
+					this._error$.next( `websocket error ${ exc }` );
 					interval = Math.max( min_delay, Math.min( max_delay, interval << 1 ) );
-					if ( this._state$.value === undefined ) {
+					this._websocket = undefined;
+					if ( this._state$.value !== false ) {
 						this._state$.next( undefined );
 					}
 				}
 			}
-		);
+		} );
 	}
 
 	/**
@@ -74,6 +70,7 @@ export class Reactive_Client {
 		Reconnects WebSocket
 	*/
 	reconnect(): void {
+		this.disconnect();
 		this._state$.next( undefined );
 	}
 
@@ -82,6 +79,18 @@ export class Reactive_Client {
 	*/
 	disconnect(): void {
 		this._state$.next( false );
+		if ( this._websocket ) {
+			this._websocket.close();
+			this._websocket = undefined;
+		}
+	}
+
+	/**
+		Returns observable of WebSocket connection state
+		@returns observable of boolean or undefined: true if connected, false if disconnected, undefined if neither
+	*/
+	state(): Observable<boolean | undefined> {
+		return this._state$;
 	}
 
 	/**
@@ -144,13 +153,11 @@ export class Reactive_Client {
 			mergeMap( () => this.emit() ),
 			filter( m => m.topic === topic ),
 			take( cnt ),
-			finalize(
-				() => {
-					if ( cnt > 0 ) {
-						this.subscribe( topic, 0 ).subscribe();
-					}
+			finalize( () => {
+				if ( cnt > 0 ) {
+					this.subscribe( topic, 0 ).subscribe();
 				}
-			)
+			} )
 		);
 	}
 
